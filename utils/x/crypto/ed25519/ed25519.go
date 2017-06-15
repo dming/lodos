@@ -21,7 +21,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/liangdas/mqant/utils/x/crypto/ed25519/internal/edwards25519"
+	"github.com/dming/lodos/utils/x/crypto/ed25519/internal/edwards25519"
 )
 
 const (

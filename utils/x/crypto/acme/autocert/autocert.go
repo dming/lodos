@@ -29,8 +29,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liangdas/mqant/utils/x/crypto/acme"
-	"github.com/liangdas/mqant/utils/x/net/context"
+	"github.com/dming/lodos/utils/x/crypto/acme"
+	"github.com/dming/lodos/utils/x/net/context"
 )
 
 // pseudoRand is safe for concurrent use.

@@ -37,8 +37,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liangdas/mqant/utils/x/net/context"
-	"github.com/liangdas/mqant/utils/x/net/context/ctxhttp"
+	"github.com/dming/lodos/utils/x/net/context"
+	"github.com/dming/lodos/utils/x/net/context/ctxhttp"
 )
 
 // LetsEncryptURL is the Directory endpoint of Let's Encrypt CA.

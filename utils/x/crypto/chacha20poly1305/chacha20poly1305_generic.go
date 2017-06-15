@@ -7,8 +7,8 @@ package chacha20poly1305
 import (
 	"encoding/binary"
 
-	"github.com/liangdas/mqant/utils/x/crypto/chacha20poly1305/internal/chacha20"
-	"github.com/liangdas/mqant/utils/x/crypto/poly1305"
+	"github.com/dming/lodos/utils/x/crypto/chacha20poly1305/internal/chacha20"
+	"github.com/dming/lodos/utils/x/crypto/poly1305"
 )
 
 func roundTo16(n int) int {
