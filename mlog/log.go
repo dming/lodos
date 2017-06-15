@@ -13,7 +13,7 @@
 // limitations under the License.
 package mlog
 import (
-	"logger/ozzo-log"
+	"github.com/dming/lodos/logger/ozzo-log"
 )
 var mqlog *log.Logger
 var defaultLogger *log.Logger

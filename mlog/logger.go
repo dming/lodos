@@ -2,7 +2,7 @@ package mlog
 
 import (
 	"fmt"
-	"logger/ozzo-log"
+	"github.com/dming/lodos/logger/ozzo-log"
 	"time"
 )
 
