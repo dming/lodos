@@ -21,7 +21,7 @@ type Skeleton struct {
 	rwmutex *sync.RWMutex
 }
 
-func (s *Skeleton) Init(app module.AppInterface, settings conf.ModuleSettings)  {
+func (s *Skeleton) OnInit(app module.AppInterface, settings conf.ModuleSettings)  {
 	s.App = app
 	s.settings = settings
 	s.hash = settings.Id
