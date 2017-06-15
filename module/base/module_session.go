@@ -27,7 +27,7 @@ func NewModuleSession(app module.AppInterface, id string, typ string, chanCall c
 
 func (m *moduleSession) CreateClient(chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) error {
 	var err error
-	m.RpcClient, err = baserpc.NewClient()
+	m.RpcClient = baserpc.NewClient()
 	if err != nil {
 		fmt.Printf("error in moduleSession.CreateClient, %s", err.Error())
 		return err

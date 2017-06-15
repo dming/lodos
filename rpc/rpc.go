@@ -43,8 +43,6 @@ type Server interface {
 	RegisterGo(id string, f interface{})
 	Run(chanCall chan *CallInfo, chanDone chan error)
 	Exec(ci *CallInfo)
-	exec(fn reflect.Value, ci *CallInfo) (err error)
-	ret(ci *CallInfo, ri *RetInfo) (err error)
 	Close() error
 }
 

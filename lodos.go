@@ -1,9 +1,9 @@
 package lodos
 
-import "github.com/dming/lodos/module"
+import "module"
 import (
-	"github.com/dming/lodos/app"
+	"app"
 )
 func CreateApp() module.AppInterface {
-	return app.NewApp(Version)
+	return app.NewApp("1.0.0")
 }
