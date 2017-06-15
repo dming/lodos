@@ -5,6 +5,7 @@ import (
 	"github.com/dming/lodos/module/base"
 	"github.com/dming/lodos/conf"
 	"fmt"
+	log "github.com/dming/lodos/mlog"
 )
 
 func NewModuleManager() module.ModuleManager {
@@ -19,7 +20,7 @@ type moduleManager struct {
 }
 
 func (mg *moduleManager) Init(app module.AppInterface, processId string) {
-	//log.Info("This service ProcessID is [%s]", ProcessID)
+	log.Info("This service ProcessID is [%s]", processId)
 	mg.app = app
 	mg.CheckModuleSettings() //配置文件规则检查
 

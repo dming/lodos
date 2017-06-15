@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"strings"
 	"encoding/json"
+	//log "github.com/dming/lodos/mlog"
 )
 
 var (
@@ -78,6 +79,6 @@ func readFileInto(path string) error {
 		}
 	}
 	data = buf.Bytes()
-	//fmt.Print(string(data))
+	//log.Info(string(data))
 	return json.Unmarshal(data, &Conf)
 }

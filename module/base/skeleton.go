@@ -21,11 +21,11 @@ type Skeleton struct {
 	rwmutex *sync.RWMutex
 }
 
-func (s *Skeleton) OnInit(app module.AppInterface, settings conf.ModuleSettings)  {
+func (s *Skeleton) Init(app module.AppInterface, settings conf.ModuleSettings)  {
 	s.App = app
 	s.settings = settings
 	s.hash = settings.Id
-	s.GetServer().OnInit(app, settings)
+	s.server = NewRpcServerModule(app, settings)
 }
 
 func (s *Skeleton) Destroy()  {
@@ -33,9 +33,6 @@ func (s *Skeleton) Destroy()  {
 }
 
 func (s *Skeleton)GetServer() module.RpcServerModule  {
-	if s.server == nil {
-		return new(rpcServerModule)
-	}
 	return s.server
 }
 

@@ -96,8 +96,8 @@ func (a *app) Run(debug bool, mods ...module.Module) error {
 			fmt.Println(err)
 		}
 	}
-	//log.Init(debug, *processId, *logDir)
-	//log.Info("Server configuration file path [%s]", *confPath)
+	log.Init(debug, *processId, *logDir)
+	log.Info("Server configuration file path [%s]", *confPath)
 
 	conf.LoadConfig(f.Name()) //加载配置文件
 	a.ConfigSettings(conf.Conf)  //配置信息
@@ -106,7 +106,7 @@ func (a *app) Run(debug bool, mods ...module.Module) error {
 	a.manager = NewModuleManager()
 
 	for _, v := range mods {
-		a.manager.RegisterRunMod(v)
+		a.manager.Register(v)
 	}
 	a.OnInit(a.settings)
 	a.manager.Init(a, *processId)

@@ -15,7 +15,7 @@ type Module interface {
 }
 
 type Skeleton interface {
-	OnInit(app AppInterface, settings conf.ModuleSettings)
+	Init(app AppInterface, settings conf.ModuleSettings)
 	GetApp() AppInterface
 	GetServer() RpcServerModule
 	GetServerId() string
