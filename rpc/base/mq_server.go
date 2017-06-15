@@ -1,0 +1,232 @@
+package baserpc
+
+import (
+	"fmt"
+	conf "github.com/dming/lodos/conf"
+	"github.com/streadway/amqp"
+	"github.com/golang/protobuf/proto"
+	"github.com/dming/lodos/rpc/pb"
+	"github.com/dming/lodos/rpc"
+	"reflect"
+	"github.com/dming/lodos/module"
+	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/rpc/utils"
+)
+
+type mqServer struct {
+	app module.AppInterface
+
+	ChanRet chan *rpc.RetInfo   // get retInfo from server
+	ChanSend chan *rpc.CallInfo //send callInfo to server
+	Consumer *Consumer
+	done chan error
+}
+
+func NewMqServer(app module.AppInterface, info *conf.Rabbitmq, chanSend chan *rpc.CallInfo) (*mqServer, error) {
+	// Init consumer first
+	var queueName = info.Queue
+	var key = info.BindingKey
+	var exchange = info.Exchange
+	c, err := NewConsumer(info, info.Uri, info.Exchange, info.ExchangeType, info.ConsumerTag)
+	if err != nil {
+		log.Error("MqConsumer connect fail: %s", err)
+		return nil, err
+	}
+
+	log.Info("declared Exchange, declaring Queue %q", queueName)
+	queue, err := c.channel.QueueDeclare(
+		queueName, // name of the queue
+		true,      // durable	持久化
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // noWait
+		nil,       // arguments
+	)
+	if err != nil {
+		log.Error("Queue Declare: %s", err)
+		return nil, fmt.Errorf("Queue Declare: %s", err)
+	}
+
+	log.Info("declared Queue (%q %d messages, %d consumers), binding to Exchange (key %q)",
+		queue.Name, queue.Messages, queue.Consumers, key)
+	if err = c.channel.QueueBind(
+		queue.Name, // name of the queue
+		key,        // bindingKey
+		exchange,   // sourceExchange
+		false,      // noWait
+		nil,        // arguments
+	); err != nil {
+		return nil, fmt.Errorf("Queue Bind: %s", err)
+	}
+
+	log.Info("Queue bound to Exchange, starting Consume (consumer tag %q)", c.tag)
+	deliveries, err := c.channel.Consume(
+		queue.Name, // name
+		c.tag,      // consumerTag,
+		false,      // noAck 自动应答
+		false,      // exclusive
+		false,      // noLocal
+		false,      // noWait
+		nil,        // arguments
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Queue Consume: %s", err)
+	}
+
+	s := new(mqServer)
+	s.app = app
+	s.ChanSend = chanSend
+	s.ChanRet = make(chan *rpc.RetInfo)
+	s.Consumer = c
+	s.done = make(chan error)
+
+	go s.Run(deliveries, s.done)
+
+	return s, nil
+}
+
+func (s *mqServer) Run(chanDeli <-chan amqp.Delivery, done chan error) {
+	defer func() {
+		//
+	}()
+
+	for {
+		select {
+		case d, ok := <- chanDeli :
+			if !ok {
+				chanDeli = nil
+			} else {
+				/*fmt.Printf(
+							"MqServer: got %dB on_request_handle delivery: [%v] %q \n",
+							len(d.Body),
+							d.DeliveryTag,
+							d.Body,
+				)*/
+				d.Ack(false)
+				//解析，封装，发送
+				mci, err := s.UnmarshalMqCallInfo(d.Body)
+				if err == nil {
+					ci := new(rpc.CallInfo)
+					ci.Id = mci.Id
+					ci.ChanRet = s.ChanRet
+					ci.ReplyTo = mci.ReplyTo
+					ci.Flag = mci.Flag
+					if len(mci.ArgsType) > 0 {
+						ci.Args = make([]interface{}, len(mci.ArgsType))
+						for i, v := range mci.ArgsType {
+							temp, _ := argsutils.Bytes2Args(s.app, v, mci.Args[i])
+							ci.Args[i] = reflect.ValueOf(temp).Interface()
+						}
+					}
+					s.ChanSend <- ci
+				} else {
+					log.Error("error: ", err)
+				}
+			}
+		case ri, ok := <- s.ChanRet:
+			if !ok {
+				s.ChanRet = nil
+			} else {
+				err := s.response(ri)
+				if err != nil {
+					log.Error("Error : ", err)
+				}
+			}
+		case <-done :
+			s.Shutdown()
+			break
+
+		}
+		if chanDeli == nil || s.ChanRet == nil {
+			break
+		}
+	}
+}
+
+func (s *mqServer) response(ri *rpc.RetInfo) error {
+
+	body, err := s.MarshalRetInfo(ri)
+	if err != nil {
+		fmt.Printf("mqserver response error is %s\n", err)
+	}
+
+	if err = s.Consumer.channel.Publish(
+		"", // publish to an exchange
+		ri.ReplyTo, // routing to 0 or more queues
+		false, // mandatory
+		false, // immediate
+		amqp.Publishing{
+			Headers:         amqp.Table{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			Body:            body,
+			DeliveryMode:    amqp.Transient, // 1=non-persistent, 2=persistent
+			Priority:        0,              // 0-9
+			// a bunch of application/implementation-specific fields
+		},
+	); err != nil {
+		log.Warning("Exchange Publish: %s", err)
+		return err
+	} else {
+		log.Info("MqServer Exchange Publish success : %s,  %s\n", ri.Flag,ri.ReplyTo)
+	}
+	return nil
+}
+
+
+func (s *mqServer) GetDoneChan() (chan error)  {
+	return s.done
+}
+
+/**
+停止接收请求
+*/
+func (s *mqServer) StopConsume() error {
+	return s.Consumer.Cancel()
+}
+
+/**
+注销消息队列
+*/
+func (s *mqServer) Shutdown() error {
+	return s.Consumer.Shutdown()
+}
+
+
+func (s *mqServer) UnmarshalMqCallInfo(data []byte) (*rpcpb.MqCallInfo, error) {
+	//fmt.Println(msg)
+	//保存解码后的数据，Value可以为任意数据类型
+	var ci rpcpb.MqCallInfo
+	err := proto.Unmarshal(data, &ci)
+	if err != nil {
+		return nil, err
+	} else {
+		return &ci, err
+	}
+
+	panic("bug")
+}
+// goroutine safe
+func (s *mqServer) MarshalRetInfo(ri *rpc.RetInfo) ([]byte, error) {
+	//log.Error("",map2)
+	mri := new(rpcpb.MqRetInfo)
+	mri.ReplyTo = ri.ReplyTo
+	mri.Flag = ri.Flag
+	if ri.Err != nil {
+		mri.Error = ri.Err.Error()
+	}
+	mri.RetsType = make([]string, len(ri.Ret))
+	mri.Rets = make([][]byte, len(ri.Ret))
+
+	for i, v := range ri.Ret {
+		var err error
+		mri.RetsType[i], mri.Rets[i], err = argsutils.ArgsTypeAnd2Bytes(s.app, v)
+		if err != nil {
+			fmt.Printf("err in MarshalRetInfo of ri.flag :  %s is %s\n", ri.Flag, err.Error())
+			mri.Error = err.Error()
+		}
+	}
+	b, err := proto.Marshal(mri)
+	return b, err
+}
+

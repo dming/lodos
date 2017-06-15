@@ -1,0 +1,18 @@
+syntax = "proto3";
+package rpcpb;
+
+message MqCallInfo {
+    string Id = 1;
+    string ReplyTo = 2;
+    repeated string ArgsType = 3;
+    repeated bytes Args = 4;
+    string Flag = 5;
+}
+
+message RetInfo {
+    string Flag = 1;
+    string err = 2;
+    repeated string RetsType = 3;
+    repeated bytes Rets = 4;
+    string ReplyTo = 5;
+}
