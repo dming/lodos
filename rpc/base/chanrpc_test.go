@@ -4,13 +4,8 @@ import (
 	"sync"
 //	"reflect"
 //	"time"
-<<<<<<< HEAD
 	"github.com/dming/lodos/conf"
 	"github.com/dming/lodos/rpc/base"
-=======
-	"conf"
-	"rpc/base"
->>>>>>> 1656e7edabe1d21a1578bdd9aac650c27d8a51ce
 //	"fmt"
 	"fmt"
 	"time"

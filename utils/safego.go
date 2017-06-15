@@ -14,15 +14,9 @@
 package utils
 
 import (
-<<<<<<< HEAD
 	"github.com/dming/lodos/conf"
 	"runtime"
 	log "github.com/dming/lodos/mlog"
-=======
-	"conf"
-	"runtime"
-	log "mlog"
->>>>>>> 1656e7edabe1d21a1578bdd9aac650c27d8a51ce
 )
 
 var pendingGo int
