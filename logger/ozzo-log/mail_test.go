@@ -6,13 +6,11 @@ package log
 
 import (
 	"testing"
-
-	"mqant/logger/ozzo-log"
 )
 
 func TestNewMailTarget(t *testing.T) {
-	target := log.NewMailTarget()
-	if target.MaxLevel != log.LevelDebug {
-		t.Errorf("NewMailTarget.MaxLevel = %v, expected %v", target.MaxLevel, log.LevelDebug)
+	target := NewMailTarget()
+	if target.MaxLevel != LevelDebug {
+		t.Errorf("NewMailTarget.MaxLevel = %v, expected %v", target.MaxLevel, LevelDebug)
 	}
 }

@@ -184,7 +184,7 @@ func (a *app) GetModuleSession (filter string, hash string) (module.ModuleSessio
 	}
 	moduleType := sl[0]
 	route, _ := a.GetRoute(moduleType)
-	ms, err := route(*a, moduleType, hash)
+	ms, err := route(module.AppInterface(a), moduleType, hash)
 	if err != nil {
 		return nil, err
 	} else {

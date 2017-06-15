@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"mqant/logger/ozzo-log"
 )
 
 func TestFilterAllow(t *testing.T) {
@@ -28,9 +27,9 @@ func TestFilterAllow(t *testing.T) {
 		{[]string{"system.*"}, "system.db", true},
 	}
 	for _, test := range tests {
-		filter := log.Filter{MaxLevel: log.LevelDebug, Categories: test.cats}
+		filter := Filter{MaxLevel: LevelDebug, Categories: test.cats}
 		filter.Init()
-		e := &log.Entry{Category: test.cat}
+		e := &Entry{Category: test.cat}
 		if filter.Allow(e) != test.expected {
 			t.Errorf("filter(%q).Allow(%q) = %v, expected %v", strings.Join(test.cats, ","), test.cat, filter.Allow(e), test.expected)
 		}

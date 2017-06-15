@@ -10,13 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	"mqant/logger/ozzo-log"
 )
 
 func TestNewFileTarget(t *testing.T) {
-	target := log.NewFileTarget()
-	if target.MaxLevel != log.LevelDebug {
-		t.Errorf("NewFileTarget.MaxLevel = %v, expected %v", target.MaxLevel, log.LevelDebug)
+	target := NewFileTarget()
+	if target.MaxLevel != LevelDebug {
+		t.Errorf("NewFileTarget.MaxLevel = %v, expected %v", target.MaxLevel, LevelDebug)
 	}
 	if target.Rotate != true {
 		t.Errorf("NewFileTarget.Rotate = %v, expected %v", target.Rotate, true)
@@ -33,8 +32,8 @@ func TestFileTarget(t *testing.T) {
 	logFile := "app.log"
 	os.Remove(logFile)
 
-	logger := log.NewLogger()
-	target := log.NewFileTarget()
+	logger := NewLogger()
+	target := NewFileTarget()
 	target.FileName = logFile
 	target.Categories = []string{"system.*"}
 	logger.Targets = append(logger.Targets, target)
