@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"errors"
 	"sync"
-	"rpc"
+	"github.com/dming/lodos/rpc"
 )
 
 type ServerInterface interface {

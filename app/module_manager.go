@@ -1,9 +1,9 @@
 package app
 
 import (
-	"module"
-	"module/base"
-	"conf"
+	"github.com/dming/lodos/module"
+	"github.com/dming/lodos/module/base"
+	"github.com/dming/lodos/conf"
 	"fmt"
 )
 
@@ -31,7 +31,7 @@ func (mg *moduleManager) Init(app module.AppInterface, processId string) {
 					//这里可能有BUG 公网IP和局域网IP处理方式可能不一样,先不管
 					if processId == setting.ProcessID {
 						mg.runMods = append(mg.runMods, mg.mods[i]) //这里加入能够运行的组件
-						mg.mods[i].Settings = setting
+						mg.mods[i].Settings = *setting
 					}
 				}
 				break //跳出内部循环

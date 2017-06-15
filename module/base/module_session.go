@@ -1,11 +1,11 @@
 package basemodule
 
 import (
-	"rpc"
+	"github.com/dming/lodos/rpc"
 	"fmt"
-	"conf"
-	"module"
-	"rpc/base"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/module"
+	"github.com/dming/lodos/rpc/base"
 )
 
 type moduleSession struct {

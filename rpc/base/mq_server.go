@@ -2,15 +2,15 @@ package baserpc
 
 import (
 	"fmt"
-	conf "conf"
+	conf "github.com/dming/lodos/conf"
 	"github.com/streadway/amqp"
 	"github.com/golang/protobuf/proto"
-	"rpc/pb"
-	"rpc"
+	"github.com/dming/lodos/rpc/pb"
+	"github.com/dming/lodos/rpc"
 	"reflect"
-	"module"
-	log "mlog"
-	"rpc/utils"
+	"github.com/dming/lodos/module"
+	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/rpc/utils"
 )
 
 type mqServer struct {

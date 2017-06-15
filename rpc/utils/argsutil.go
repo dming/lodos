@@ -16,8 +16,8 @@ package argsutils
 import (
 	"fmt"
 	"reflect"
-	"module"
-	"utils"
+	"github.com/dming/lodos/module"
+	"github.com/dming/lodos/utils"
 )
 
 const (

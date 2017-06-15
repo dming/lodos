@@ -2,9 +2,9 @@ package basemodule
 
 import (
 	"sync"
-	"conf"
-	"rpc"
-	"module"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/rpc"
+	"github.com/dming/lodos/module"
 )
 
 func NewSkeleton() *Skeleton {

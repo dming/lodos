@@ -2,17 +2,17 @@ package basemodule
 
 import "sync"
 import (
-	module "module"
-	"conf"
+	module "github.com/dming/lodos/module"
+	"github.com/dming/lodos/conf"
 	"runtime"
-	log "mlog"
+	log "github.com/dming/lodos/mlog"
 )
 
 type BaseModule struct {
 	Mi    module.Module
 	CloseSig chan bool
 	Wg       sync.WaitGroup
-	Settings 	*conf.ModuleSettings
+	Settings 	conf.ModuleSettings
 }
 
 func Run(m *BaseModule) {

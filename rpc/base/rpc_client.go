@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 	"fmt"
-	"rpc"
+	"github.com/dming/lodos/rpc"
 )
 
 // client should only know about the channel connected to server, \

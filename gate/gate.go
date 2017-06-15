@@ -15,14 +15,14 @@ package gate
 
 import (
 	"bufio"
-	"conf"
-	"network"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/network"
 	"time"
-	"module"
+	"github.com/dming/lodos/module"
 	"fmt"
 	"reflect"
-	log "mlog"
-	"module/base"
+	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/module/base"
 )
 
 var RPC_PARAM_SESSION_TYPE="SESSION"
@@ -100,7 +100,7 @@ func (gate *Gate)GetTypes()([]string){
 }
 
 func (gate *Gate) OnInit(app module.AppInterface, settings conf.ModuleSettings) {
-	gate.Skeleton.Init(app, settings) //这是必须的
+	gate.Skeleton.OnInit(app, settings) //这是必须的
 
 	//添加Session结构体的序列化操作类
 	err := app.AddRPCSerialize("gate", gate)

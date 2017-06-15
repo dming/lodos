@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"conf"
-	"network/mqtt"
-	log "mlog"
-	"network"
-	"utils/uuid"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/network/mqtt"
+	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/network"
+	"github.com/dming/lodos/utils/uuid"
 	"runtime"
 	"strings"
 	"time"
-	"rpc/utils"
+	"github.com/dming/lodos/rpc/utils"
 )
 
 type resultInfo struct {

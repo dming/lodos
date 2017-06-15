@@ -5,12 +5,12 @@ import (
 	"sync"
 	"github.com/streadway/amqp"
 	"github.com/golang/protobuf/proto"
-	"conf"
-	"rpc/pb"
-	"rpc"
-	"module"
-	log "mlog"
-	"rpc/utils"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/rpc/pb"
+	"github.com/dming/lodos/rpc"
+	"github.com/dming/lodos/module"
+	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/rpc/utils"
 	"time"
 )
 

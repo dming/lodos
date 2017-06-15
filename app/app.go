@@ -3,20 +3,20 @@
 package app
 
 import (
-	"conf"
+	"github.com/dming/lodos/conf"
 	"fmt"
-	"rpc"
-	"module"
+	"github.com/dming/lodos/rpc"
+	"github.com/dming/lodos/module"
 	"os/exec"
 	"os"
 	"path/filepath"
 	"flag"
-	log "mlog"
+	log "github.com/dming/lodos/mlog"
 	"os/signal"
 	"strings"
 	"math"
 	"hash/crc32"
-	"module/base"
+	"github.com/dming/lodos/module/base"
 )
 
 
@@ -37,7 +37,6 @@ func NewApp(version string) module.AppInterface  {
 	a.rpcSerializes=map[string]module.RPCSerialize{}
 	a.version = version
 	return a
-
 }
 
 type app struct {
@@ -184,7 +183,7 @@ func (a *app) GetModuleSession (filter string, hash string) (module.ModuleSessio
 	}
 	moduleType := sl[0]
 	route, _ := a.GetRoute(moduleType)
-	ms, err := route(module.AppInterface(a), moduleType, hash)
+	ms, err := route(a, moduleType, hash)
 	if err != nil {
 		return nil, err
 	} else {

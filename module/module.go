@@ -1,21 +1,21 @@
 package module
 
-import "rpc"
+import "github.com/dming/lodos/rpc"
 import (
-	"conf"
+	"github.com/dming/lodos/conf"
 )
 
 type Module interface {
 	Version() string //模块版本
 	GetType() string //模块类型
 	//OnConfChanged(settings *conf.ModuleSettings)	//为以后动态服务发现做准备
-	OnInit(app AppInterface, settings *conf.ModuleSettings)
+	OnInit(app AppInterface, settings conf.ModuleSettings)
 	OnDestroy()
 	Run(closeSig chan bool)
 }
 
 type Skeleton interface {
-	Init(app AppInterface, settings conf.ModuleSettings)
+	OnInit(app AppInterface, settings conf.ModuleSettings)
 	GetApp() AppInterface
 	GetServer() RpcServerModule
 	GetServerId() string

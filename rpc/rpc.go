@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"reflect"
-	"rpc/pb"
+	"github.com/dming/lodos/rpc/pb"
 	"github.com/streadway/amqp"
 )
 

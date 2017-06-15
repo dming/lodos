@@ -1,11 +1,11 @@
 package basemodule
 
 import (
-	"rpc"
-	"conf"
-	"module"
-	"rpc/base"
-	log "mlog"
+	"github.com/dming/lodos/rpc"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/module"
+	"github.com/dming/lodos/rpc/base"
+	log "github.com/dming/lodos/mlog"
 )
 
 func NewRpcServerModule(app module.AppInterface, settings conf.ModuleSettings) module.RpcServerModule {

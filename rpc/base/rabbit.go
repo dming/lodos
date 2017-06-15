@@ -2,8 +2,8 @@ package baserpc
 
 import (
 	"fmt"
-	"conf"
-	log "mlog"
+	"github.com/dming/lodos/conf"
+	log "github.com/dming/lodos/mlog"
 	"github.com/streadway/amqp"
 )
 

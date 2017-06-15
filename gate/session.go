@@ -3,7 +3,7 @@ package gate
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"module"
+	"github.com/dming/lodos/module"
 )
 
 type sessionagent struct {
