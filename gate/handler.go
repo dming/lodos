@@ -16,6 +16,7 @@ package gate
 import (
 	log "github.com/dming/lodos/mlog"
 	"github.com/dming/lodos/utils"
+	"fmt"
 )
 
 type handler struct {
@@ -63,10 +64,11 @@ func (h *handler) Update(Sessionid string) (result Session, err string) {
 /**
  *Bind the session with the the Userid.
  */
-func (h *handler) Bind(Sessionid string, Userid string) (result Session, err string) {
+func (h *handler) Bind(Sessionid string, Userid string) (result Session, err error) {
+	log.Debug("bind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	agent.(Agent).GetSession().SetUserid(Userid)

@@ -17,7 +17,7 @@ package gate
 net代理服务 处理器
 */
 type GateHandler interface {
-	Bind(Sessionid string, Userid string) (result Session, err string)                   //Bind the session with the the Userid.
+	Bind(Sessionid string, Userid string) (result Session, err error)                   //Bind the session with the the Userid.
 	UnBind(Sessionid string) (result Session, err string)                                //UnBind the session with the the Userid.
 	Set(Sessionid string, key string, value string) (result Session, err string)    //Set values (one or many) for the session.
 	Remove(Sessionid string, key string) (result interface{}, err string)                    //Remove value from the session.

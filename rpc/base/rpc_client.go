@@ -5,6 +5,7 @@ import (
 	"time"
 	"fmt"
 	"github.com/dming/lodos/rpc"
+	log "github.com/dming/lodos/mlog"
 )
 
 // client should only know about the channel connected to server, \
@@ -39,9 +40,9 @@ func (c *client) Call(id string, timeout int, args ...interface{}) (*rpc.RetInfo
 	ci.Id = id
 	ci.Args = args
 	if timeout <= 0 || timeout > 120 {
-		timeout = 5
+		timeout = 10
 	}
-	ticker := time.NewTicker(time.Second * time.Duration(timeout))
+	ticker := time.NewTicker(time.Second * 10)
 
 	if c.ChanCall != nil {
 		chanSyncRet := make(chan *rpc.RetInfo, 1)
@@ -54,6 +55,7 @@ func (c *client) Call(id string, timeout int, args ...interface{}) (*rpc.RetInfo
 			close(chanSyncRet)
 			return ri, err
 		case <-ticker.C:
+			ticker.Stop()
 			return &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}, err
 		}
 	} else if c.mqClient != nil {
@@ -69,6 +71,7 @@ func (c *client) Call(id string, timeout int, args ...interface{}) (*rpc.RetInfo
 			close(chanSyncRet)
 			return ri, err
 		case <-ticker.C:
+			ticker.Stop()
 			return &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}, err
 		}
 	} else {
@@ -81,6 +84,7 @@ func (c *client) call(ci *rpc.CallInfo) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
+			log.Error(err.Error())
 		}
 	}()
 	

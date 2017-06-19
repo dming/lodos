@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync"
 	"github.com/dming/lodos/rpc"
+	log "github.com/dming/lodos/mlog"
 )
 
 type ServerInterface interface {
@@ -112,7 +113,7 @@ func (s *server) Exec(ci *rpc.CallInfo) {
 	// check callinfo.fuctionName
 	fi, ok := s.functions[ci.Id]
 	if !ok {
-		fmt.Printf("cant find the function name : %v\n", ci.Id)
+		log.Error("can not find the function name : %v\n", ci.Id)
 		s := "can not find the function name: " + ci.Id
 		err := errors.New(s)
 		ri := new(rpc.RetInfo)
@@ -127,7 +128,6 @@ func (s *server) Exec(ci *rpc.CallInfo) {
 			//s.ret(ci, &ChanRetInfo{err: fmt.Errorf("%v", r)})
 		}
 	}()
-
 	// if sync, exec(f reflect.value)
 	if !fi.IsGo {
 		s.exec(fi.Fn, ci)
@@ -139,12 +139,10 @@ func (s *server) Exec(ci *rpc.CallInfo) {
 
 func (s *server) exec(fn reflect.Value, ci *rpc.CallInfo) (err error) {
 	//f, ok := s.functions[ci.id]
-
 	in := make([]reflect.Value, len(ci.Args))
 	for k, arg := range ci.Args {
 		in[k] = reflect.ValueOf(arg)
 	}
-
 	retValues := fn.Call(in)
 	ret := make([]interface{}, len(retValues))
 	for i, v := range retValues {

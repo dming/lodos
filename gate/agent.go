@@ -117,9 +117,15 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		}
 	}()
 
-	toResult := func(a *agent, Topic string, Result interface{}, Error string) (err error) {
+	toResult := func(a *agent, Topic string, Result interface{}, Error error) (err error) {
+		var errStr string
+		if Error == nil {
+			errStr = ""
+		} else {
+			errStr = Error.Error()
+		}
 		r := &resultInfo{
-			Error:  Error,
+			Error:  errStr,
 			Result: Result,
 		}
 		b, err := json.Marshal(r)
@@ -158,8 +164,9 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			var obj interface{} // var obj map[string]interface{}
 			err := json.Unmarshal(pub.GetMsg(), &obj)
 			if err != nil {
+				log.Debug("try as json and get err : %s, %s", err.Error(), string(pub.GetMsg()))
 				if msgid != "" {
-					toResult(a, *pub.GetTopic(), nil, "The JSON format is incorrect")
+					toResult(a, *pub.GetTopic(), nil, fmt.Errorf("The JSON format is incorrect"))
 				}
 				return
 			}
@@ -169,7 +176,6 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			ArgsType[1] = argsutils.BYTES
 			args[1] = pub.GetMsg()
 		}
-		panic("bug")
 		hash := ""
 		if a.session.GetUserid() != "" {
 			hash = a.session.GetUserid()
@@ -180,27 +186,35 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		moduleSession, err := a.gate.GetApp().GetModuleSession(topics[0], hash)
 		if err != nil {
 			if msgid != "" {
-				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Service(type:%s) not found", topics[0]))
+				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("Service(type:%s) not found", topics[0]))
 			}
 			return
 		}
 		startsWith := strings.HasPrefix(topics[1], "HD_")
 		if !startsWith {
 			if msgid != "" {
-				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Method(%s) must begin with 'HD_'", topics[1]))
+				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("Method(%s) must begin with 'HD_'", topics[1]))
 			}
 			return
 		}
-
 		if msgid != "" { //msgid means the flag of the msg(call)
-			ArgsType[0]=RPC_PARAM_SESSION_TYPE
-			b,err:=a.GetSession().Serializable()
+			ArgsType[0] = RPC_PARAM_SESSION_TYPE
+			b, err := a.GetSession().Serializable()
 			if err!=nil{
 				return
 			}
-			args[0]=b
-			result, err := moduleSession.GetClient().Call(topics[1], 5, ArgsType,  args) //在此调用RPC。--dming
-			toResult(a, *pub.GetTopic(), result, err.Error()) //返回结果给客户端
+			args[0] = b
+			//...something wrong
+			arg1, err := argsutils.Bytes2Args(a.gate.GetApp(), ArgsType[1], args[1])
+			if err != nil {
+				log.Error("argsutils.Bytes2Args error : %s", err.Error())
+				return
+			}
+			log.Info("%s, %v", ArgsType[1] ,arg1 )
+			result, err := moduleSession.GetClient().Call(topics[1], 5, a.GetSession(), arg1) //在此调用RPC。--dming
+			log.Info("call %s, result is %v, err is %v", topics[1], result, err)
+			toResult(a, *pub.GetTopic(), result, err) //返回结果给客户端
+			//...
 		}else{
 			ArgsType[0]=RPC_PARAM_SESSION_TYPE
 			b,err:=a.GetSession().Serializable()

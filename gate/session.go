@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/dming/lodos/module"
+	log "github.com/dming/lodos/mlog"
 )
 
 type sessionagent struct {
@@ -164,13 +165,22 @@ func (session *sessionagent) Bind(Userid string) (error) {
 		return err
 	}
 	result, err := server.GetClient().Call("Bind", 5,  session.session.Sessionid, Userid)
-	if err == nil {
+	log.Info("in Bind, result is : %v", result)
+	if err == nil && result.Err == nil {
 		if result != nil {
 			//绑定成功,重新更新当前Session
+			if len(result.Ret) < 1 {
+				log.Error("len(result.Ret) < 1, %v", result)
+			}
 			session.update(result.Ret[0].(Session))
 		}
 	}
-	return err
+	if err != nil {
+		return err
+	} else if result.Err != nil {
+		return result.Err
+	}
+	return nil
 }
 
 func (session *sessionagent) UnBind() (error) {
