@@ -54,14 +54,14 @@ func (rs *rpcServerModule) OnDestroy() {
 	}
 }
 
-func (rs *rpcServerModule) Regitster(id string, f interface{}) {
+func (rs *rpcServerModule) Register(id string, f interface{}) {
 	if rs.server == nil {
 		panic("invalid RPCServer")
 	}
 	rs.server.Register(id, f)
 }
 
-func (rs *rpcServerModule) RegitsterGo(id string, f interface{}) {
+func (rs *rpcServerModule) RegisterGo(id string, f interface{}) {
 	if rs.server == nil {
 		panic("invalid RPCServer")
 	}

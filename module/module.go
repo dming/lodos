@@ -59,8 +59,8 @@ type ModuleSession interface {
 
 type RpcServerModule interface {
 	OnInit (app AppInterface, settings conf.ModuleSettings)
-	Regitster(id string, f interface{})
-	RegitsterGo(id string, f interface{})
+	Register(id string, f interface{})
+	RegisterGo(id string, f interface{})
 	GetId() string
 	GetRpcServer() rpc.Server
 	OnDestroy()

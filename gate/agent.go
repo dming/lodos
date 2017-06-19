@@ -137,6 +137,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		}
 		return
 	}
+
 	//路由服务
 	switch pack.GetType() {
 	case mqtt.PUBLISH:
@@ -168,6 +169,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			ArgsType[1] = argsutils.BYTES
 			args[1] = pub.GetMsg()
 		}
+		panic("bug")
 		hash := ""
 		if a.session.GetUserid() != "" {
 			hash = a.session.GetUserid()
