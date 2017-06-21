@@ -27,7 +27,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type session struct {
+type sessionpb struct {
 	IP        string            `protobuf:"bytes,1,opt,name=IP" json:"IP,omitempty"`
 	Network   string            `protobuf:"bytes,2,opt,name=Network" json:"Network,omitempty"`
 	Userid    string            `protobuf:"bytes,3,opt,name=Userid" json:"Userid,omitempty"`
@@ -36,47 +36,47 @@ type session struct {
 	Settings  map[string]string `protobuf:"bytes,6,rep,name=Settings" json:"Settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
-func (m *session) Reset()                    { *m = session{} }
-func (m *session) String() string            { return proto.CompactTextString(m) }
-func (*session) ProtoMessage()               {}
-func (*session) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *sessionpb) Reset()                    { *m = sessionpb{} }
+func (m *sessionpb) String() string            { return proto.CompactTextString(m) }
+func (*sessionpb) ProtoMessage()               {}
+func (*sessionpb) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *session) GetIP() string {
+func (m *sessionpb) GetIP() string {
 	if m != nil {
 		return m.IP
 	}
 	return ""
 }
 
-func (m *session) GetNetwork() string {
+func (m *sessionpb) GetNetwork() string {
 	if m != nil {
 		return m.Network
 	}
 	return ""
 }
 
-func (m *session) GetUserid() string {
+func (m *sessionpb) GetUserid() string {
 	if m != nil {
 		return m.Userid
 	}
 	return ""
 }
 
-func (m *session) GetSessionid() string {
+func (m *sessionpb) GetSessionid() string {
 	if m != nil {
 		return m.Sessionid
 	}
 	return ""
 }
 
-func (m *session) GetServerid() string {
+func (m *sessionpb) GetServerid() string {
 	if m != nil {
 		return m.Serverid
 	}
 	return ""
 }
 
-func (m *session) GetSettings() map[string]string {
+func (m *sessionpb) GetSettings() map[string]string {
 	if m != nil {
 		return m.Settings
 	}
@@ -84,7 +84,7 @@ func (m *session) GetSettings() map[string]string {
 }
 
 func init() {
-	proto.RegisterType((*session)(nil), "gate.Session")
+	proto.RegisterType((*sessionpb)(nil), "gate.Session")
 }
 
 func init() { proto.RegisterFile("session/session.proto", fileDescriptor0) }

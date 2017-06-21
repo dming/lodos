@@ -49,14 +49,18 @@ func (c *client) Call(id string, timeout int, args ...interface{}) (*rpc.RetInfo
 		ci.ChanRet = chanSyncRet
 		ci.ReplyTo = ""
 		err := c.call(ci)
+		if err != nil {
+			return nil, err
+		}
 
 		select {
 		case ri := <-chanSyncRet:
 			close(chanSyncRet)
-			return ri, err
+			return ri, ri.Err
 		case <-ticker.C:
 			ticker.Stop()
-			return &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}, err
+			ri := &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}
+			return ri, ri.Err
 		}
 	} else if c.mqClient != nil {
 		chanSyncRet := make(chan *rpc.RetInfo, 1)
@@ -65,14 +69,18 @@ func (c *client) Call(id string, timeout int, args ...interface{}) (*rpc.RetInfo
 		c.flag++
 		ci.Flag = strconv.FormatInt(c.flag, 10)
 		err := c.mqClient.Call(ci)
+		if err != nil {
+			return nil, err
+		}
 
 		select {
 		case ri := <-chanSyncRet:
 			close(chanSyncRet)
-			return ri, err
+			return ri, ri.Err
 		case <-ticker.C:
 			ticker.Stop()
-			return &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}, err
+			ri := &rpc.RetInfo{Err: fmt.Errorf("function %s timeout!!!", ci.Id)}
+			return ri, ri.Err
 		}
 	} else {
 		return nil, fmt.Errorf("not local client and mq client")

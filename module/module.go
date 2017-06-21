@@ -55,6 +55,8 @@ type ModuleSession interface {
 	GetId () string
 	GetType () string
 	GetClient () rpc.Client
+	Call (id string, timeout int, args ...interface{} ) (*rpc.RetInfo, error)
+	AsynCall (id string, args ...interface{} ) (chan *rpc.RetInfo, error)
 }
 
 type RpcServerModule interface {

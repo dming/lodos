@@ -7,231 +7,264 @@ import (
 	log "github.com/dming/lodos/mlog"
 )
 
-type sessionagent struct {
+type session struct {
 	app       module.AppInterface
-	session   *session
+	sessionpb   *sessionpb
 }
 
 func NewSession(app module.AppInterface, data []byte) (Session,error) {
-	agent:=&sessionagent{
+	agent:=&session{
 		app:app,
 	}
-	se := &session{}
+	se := &sessionpb{}
 	err := proto.Unmarshal(data, se)
 	if err != nil {
 		return nil,err
 	}    // 测试结果
-	agent.session = se
+	agent.sessionpb = se
 	return agent,nil
 }
 
 func NewSessionByMap(app module.AppInterface, data map[string]interface{}) (Session,error) {
-	agent:=&sessionagent{
+	agent:=&session{
 		app:app,
-		session:new(session),
+		sessionpb:new(sessionpb),
 	}
-	err:=agent.updateMap(data)
-	if err!=nil{
-		return nil,err
+	err := agent.updateMap(data)
+	if err != nil{
+		return nil, err
 	}
-	return agent,nil
+	return agent, nil
 }
 
-func (session *sessionagent) GetIP() string {
-	return session.session.GetIP()
+func (session *session) GetIP() string {
+	return session.sessionpb.GetIP()
 }
 
-func (session *sessionagent) GetNetwork() string {
-	return session.session.GetNetwork()
+func (session *session) GetNetwork() string {
+	return session.sessionpb.GetNetwork()
 }
 
-func (session *sessionagent) GetUserid() string {
-	return session.session.GetUserid()
+func (session *session) GetUserid() string {
+	return session.sessionpb.GetUserid()
 }
 
-func (session *sessionagent) GetSessionid() string {
-	return session.session.GetSessionid()
+func (session *session) GetSessionid() string {
+	return session.sessionpb.GetSessionid()
 }
 
-func (session *sessionagent) GetServerid() string {
-	return session.session.GetServerid()
+func (session *session) GetServerid() string {
+	return session.sessionpb.GetServerid()
 }
 
-func (session *sessionagent) GetSettings() map[string]string {
-	return session.session.GetSettings()
+func (session *session) GetSettings() map[string]string {
+	return session.sessionpb.GetSettings()
 }
 
 
-func (session *sessionagent)SetIP(ip string){
-	session.session.IP=ip
+func (session *session)SetIP(ip string){
+	session.sessionpb.IP=ip
 }
-func (session *sessionagent)SetNetwork(network string){
-	session.session.Network=network
+func (session *session)SetNetwork(network string){
+	session.sessionpb.Network=network
 }
-func (session *sessionagent)SetUserid(userid string){
-	session.session.Userid=userid
+func (session *session)SetUserid(userid string){
+	session.sessionpb.Userid=userid
 }
-func (session *sessionagent)SetSessionid(sessionid string){
-	session.session.Sessionid=sessionid
+func (session *session)SetSessionid(sessionid string){
+	session.sessionpb.Sessionid=sessionid
 }
-func (session *sessionagent)SetServerid(serverid string){
-	session.session.Serverid=serverid
+func (session *session)SetServerid(serverid string){
+	session.sessionpb.Serverid=serverid
 }
-func (session *sessionagent)SetSettings(settings map[string]string){
-	session.session.Settings=settings
+func (session *session)SetSettings(settings map[string]string){
+	session.sessionpb.Settings=settings
 }
 
-func (session *sessionagent) updateMap(s map[string]interface{}) error {
+func (session *session) updateMap(s map[string]interface{}) error {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("Error on update map, [%s]", r)
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
 	Userid := s["Userid"]
 	if Userid != nil {
-		session.session.Userid = Userid.(string)
+		session.sessionpb.Userid = Userid.(string)
 	}
 	IP := s["IP"]
 	if IP != nil {
-		session.session.IP = IP.(string)
+		session.sessionpb.IP = IP.(string)
 	}
 	Network := s["Network"]
 	if Network != nil {
-		session.session.Network = Network.(string)
+		session.sessionpb.Network = Network.(string)
 	}
 	Sessionid := s["Sessionid"]
 	if Sessionid != nil {
-		session.session.Sessionid = Sessionid.(string)
+		session.sessionpb.Sessionid = Sessionid.(string)
 	}
 	Serverid := s["Serverid"]
 	if Serverid != nil {
-		session.session.Serverid = Serverid.(string)
+		session.sessionpb.Serverid = Serverid.(string)
 	}
 	Settings := s["Settings"]
 	if Settings != nil {
-		session.session.Settings = Settings.(map[string]string)
+		session.sessionpb.Settings = Settings.(map[string]string)
 	}
-	return nil
+	return err
 }
 
-func (session *sessionagent) update (s Session) error {
-	Userid := s.GetUserid()
-	session.session.Userid = Userid
-	IP := s.GetIP()
-	session.session.IP = IP
-	Network := s.GetNetwork()
-	session.session.Network = Network
-	Sessionid := s.GetSessionid()
-	session.session.Sessionid = Sessionid
-	Serverid := s.GetServerid()
-	session.session.Serverid = Serverid
-	Settings := s.GetSettings()
-	session.session.Settings = Settings
-	return nil
+func (session *session) update (s Session) error {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("Error on update, [%s]", r)
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	session.sessionpb.Userid = s.GetUserid()
+
+	session.sessionpb.IP = s.GetIP()
+
+	session.sessionpb.Network = s.GetNetwork()
+
+	session.sessionpb.Sessionid = s.GetSessionid()
+
+	session.sessionpb.Serverid = s.GetServerid()
+
+	session.sessionpb.Settings = s.GetSettings()
+	return err
 }
 
-func (session *sessionagent) Serializable() ([]byte, error){
-	data, err := proto.Marshal(session.session)
+func (session *session) Serializable() ([]byte, error){
+	data, err := proto.Marshal(session.sessionpb)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}    // 进行解码
-	return data,nil
+	return data, nil
 }
 
-
-func (session *sessionagent) Update() (error) {
-	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
-	}
-	server, e := session.app.GetServerById(session.session.Serverid)
-	if e != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
-	}
-	result, err := server.GetClient().Call("Update", 5, session.session.Sessionid)
-	if err == nil {
-		if result != nil {
-			//绑定成功,重新更新当前Session
-			session.update(result.Ret[0].(Session))
+// call Update in handler
+func (session *session) Update() (error) {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("error in update [%s]", r)
+			err = fmt.Errorf("%v", r)
 		}
-	}
-	return err
-}
+	}()
 
-func (session *sessionagent) Bind(Userid string) (error) {
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
+		return fmt.Errorf("Module.App is nil")
 	}
-	server, e := session.app.GetServerById(session.session.Serverid)
-	if e != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
+
+	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
+	if err != nil {
+		return fmt.Errorf("Service not found id(%s)", session.sessionpb.GetServerid())
 	}
-	result, err := server.GetClient().Call("Bind", 5,  session.session.Sessionid, Userid)
-	log.Info("in Bind, result is : %v", result)
-	if err == nil && result.Err == nil {
-		if result != nil {
-			//绑定成功,重新更新当前Session
-			if len(result.Ret) < 1 {
-				log.Error("len(result.Ret) < 1, %v", result)
-			}
-			session.update(result.Ret[0].(Session))
-		}
-	}
+
+	result, err := server.Call("Update", 5, session.sessionpb.GetSessionid())
 	if err != nil {
 		return err
-	} else if result.Err != nil {
-		return result.Err
 	}
-	return nil
-}
-
-func (session *sessionagent) UnBind() (error) {
-	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
-	}
-	server, e := session.app.GetServerById(session.session.Serverid)
-	if e != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
-	}
-	result, err := server.GetClient().Call("UnBind", 5, session.session.Sessionid)
-	if err == nil {
-		if result != nil {
-			//绑定成功,重新更新当前Session
-			session.update(result.Ret[0].(Session))
-		}
+	if result != nil && len(result.Ret) > 0 {
+		//绑定成功,重新更新当前Session
+		session.update(result.Ret[0].(Session))
 	}
 	return err
 }
 
-func (session *sessionagent) Push() (error) {
-	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
-	}
-	server, e := session.app.GetServerById(session.session.Serverid)
-	if e != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
-	}
-	result, err := server.GetClient().Call("Push", 5, session.session.Sessionid, session.session.Settings)
-	if err == nil {
-		if result != nil {
-			//绑定成功,重新更新当前Session
-			session.update(result.Ret[0].(Session))
+func (session *session) Bind(Userid string) (error) {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("error in Bind [%s]", r)
+			err = fmt.Errorf("%v", r)
 		}
+	}()
+
+	if session.app == nil {
+		return fmt.Errorf("Module.App is nil")
+	}
+
+	server, err := session.app.GetServerById(session.sessionpb.Serverid)
+	if err != nil {
+		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
+	}
+
+	result, err := server.Call("Bind", 5,  session.sessionpb.Sessionid, Userid)
+	log.Debug("in Bind, result is : %v", result)
+	if err != nil {
+		return err
+	}
+	if result != nil && len(result.Ret) > 0 {
+		session.update(result.Ret[0].(Session))
 	}
 	return err
 }
 
-func (session *sessionagent) Set(key string, value string) (error) {
+func (session *session) UnBind() (error) {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("error in Bind [%s]", r)
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.App is nil")
+	}
+	server, err := session.app.GetServerById(session.sessionpb.Serverid)
+	if err != nil {
+		return fmt.Errorf("Service not found id(%s), err is %s", session.sessionpb.Serverid, err)
+	}
+
+	result, err := server.GetClient().Call("UnBind", 5, session.sessionpb.Sessionid)
+	if err != nil {
 		return err
 	}
-	if session.session.Settings == nil {
-		session.session.Settings=map[string]string{}
+	if result != nil  && len(result.Ret) > 0 {
+		//绑定成功,重新更新当前Session
+		session.update(result.Ret[0].(Session))
 	}
-	session.session.Settings[key] = value
+	return err
+}
+
+func (session *session) Push() (error) {
+	if session.app == nil {
+		return fmt.Errorf("Module.App is nil")
+	}
+
+	server, e := session.app.GetServerById(session.sessionpb.Serverid)
+	if e != nil {
+		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
+	}
+
+	result, err := server.GetClient().Call("Push", 5, session.sessionpb.Sessionid, session.sessionpb.Settings)
+	if err != nil {
+		return err
+	}
+	if result != nil  && len(result.Ret) > 0 {
+		//绑定成功,重新更新当前Session
+		session.update(result.Ret[0].(Session))
+	}
+	return err
+}
+
+func (session *session) Set(key string, value string) (error) {
+	if session.app == nil {
+		return fmt.Errorf("Module.App is nil")
+	}
+
+	if session.sessionpb.Settings == nil {
+		session.sessionpb.Settings=map[string]string{}
+	}
+	session.sessionpb.Settings[key] = value
 	//server,e:=session.app.GetServersById(session.Serverid)
 	//if e!=nil{
 	//	err=fmt.Sprintf("Service not found id(%s)",session.Serverid)
@@ -247,23 +280,23 @@ func (session *sessionagent) Set(key string, value string) (error) {
 	return nil
 }
 
-func (session *sessionagent) Get(key string) (result string) {
-	if session.session.Settings == nil {
+func (session *session) Get(key string) (result string) {
+	if session.sessionpb.Settings == nil {
 		return
 	}
-	result = session.session.Settings[key]
+	result = session.sessionpb.Settings[key]
 	return
 }
 
-func (session *sessionagent) Remove(key string) (error) {
+func (session *session) Remove(key string) (error) {
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
+		return fmt.Errorf("Module.App is nil")
 	}
-	if session.session.Settings == nil {
-		session.session.Settings=map[string]string{}
+
+	if session.sessionpb.Settings == nil {
+		session.sessionpb.Settings=map[string]string{}
 	}
-	delete(session.session.Settings, key)
+	delete(session.sessionpb.Settings, key)
 	//server,e:=session.app.GetServersById(session.Serverid)
 	//if e!=nil{
 	//	err=fmt.Sprintf("Service not found id(%s)",session.Serverid)
@@ -278,47 +311,45 @@ func (session *sessionagent) Remove(key string) (error) {
 	//}
 	return nil
 }
-func (session *sessionagent) Send(topic string, body []byte) (error) {
+func (session *session) Send(topic string, body []byte) (error) {
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
+		return fmt.Errorf("Module.App is nil")
 	}
-	server, e := session.app.GetServerById(session.session.Serverid)
+	server, e := session.app.GetServerById(session.sessionpb.Serverid)
 	if e != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
+		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
-	_, err := server.GetClient().Call("Send", 5, session.session.Sessionid, topic, body)
+	_, err := server.Call("Send", 5, session.sessionpb.Sessionid, topic, body)
 	return err
 }
 
-func (session *sessionagent) SendNR(topic string, body []byte) (error) {
+func (session *session) SendNR(topic string, body []byte) (error) {
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
+		return fmt.Errorf("Module.App is nil")
 	}
-	server, err := session.app.GetServerById(session.session.Serverid)
+
+	server, err := session.app.GetServerById(session.sessionpb.Serverid)
 	if err != nil {
-		err := fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
+		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
-	_, err = server.GetClient().Call("Send", 5, session.session.Sessionid, topic, body)
+
+	_, err = server.GetClient().Call("Send", 5, session.sessionpb.Sessionid, topic, body)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (session *sessionagent) Close() (error) {
+func (session *session) Close() (error) {
 	if session.app == nil {
-		err := fmt.Errorf("Module.App is nil")
-		return err
+		return fmt.Errorf("Module.App is nil")
 	}
-	server, err := session.app.GetServerById(session.session.Serverid)
+
+	server, err := session.app.GetServerById(session.sessionpb.Serverid)
 	if err != nil {
-		err = fmt.Errorf("Service not found id(%s)", session.session.Serverid)
-		return err
+		return  fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
-	_, err = server.GetClient().Call("Close", 5, session.session.Sessionid)
+
+	_, err = server.GetClient().Call("Close", 5, session.sessionpb.Sessionid)
 	return err
 }

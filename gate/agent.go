@@ -12,11 +12,10 @@ import (
 	"runtime"
 	"strings"
 	"time"
-	"github.com/dming/lodos/rpc/utils"
 )
 
 type resultInfo struct {
-	Error  string      //错误结果 如果为nil表示请求正确
+	Err  error      //错误结果 如果为nil表示请求正确
 	Result interface{} //结果
 }
 
@@ -118,14 +117,8 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 	}()
 
 	toResult := func(a *agent, Topic string, Result interface{}, Error error) (err error) {
-		var errStr string
-		if Error == nil {
-			errStr = ""
-		} else {
-			errStr = Error.Error()
-		}
 		r := &resultInfo{
-			Error:  errStr,
+			Err:  Error,
 			Result: Result,
 		}
 		b, err := json.Marshal(r)
@@ -133,7 +126,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			a.WriteMsg(Topic, b)
 		}else{
 			r = &resultInfo{
-				Error:  err.Error(),
+				Err:  err,
 				Result: nil,
 			}
 			log.Error(err.Error())
@@ -152,29 +145,30 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		topics := strings.Split(*pub.GetTopic(), "/")
 		var msgid string
 		if len(topics) < 2 {
-			log.Error("Topic must be [moduleType@moduleID]/[handler]|[moduleType@moduleID]/[handler]/[msgid]")
+			log.Error("Topic must be [moduleType@moduleID]/[handler] | [moduleType@moduleID]/[handler]/[msgid]")
 			return
 		} else if len(topics) == 3 {
 			msgid = topics[2]
 		}
-		var ArgsType []string=make([]string, 2)
-		var args [][]byte=make([][]byte, 2)
+		var args map[string]interface{}
 		if pub.GetMsg()[0]=='{'&&pub.GetMsg()[len(pub.GetMsg())-1]=='}'{ //start from { and end with }..{}
 			//尝试解析为json为map
-			var obj interface{} // var obj map[string]interface{}
+			var obj map[string]interface{}
 			err := json.Unmarshal(pub.GetMsg(), &obj)
 			if err != nil {
-				log.Debug("try as json and get err : %s, %s", err.Error(), string(pub.GetMsg()))
+				log.Debug("try to unmarshal as json and get error : %s, %s", err.Error(), string(pub.GetMsg()))
 				if msgid != "" {
 					toResult(a, *pub.GetTopic(), nil, fmt.Errorf("The JSON format is incorrect"))
 				}
 				return
 			}
-			ArgsType[1] = argsutils.MAP
-			args[1] = pub.GetMsg()
+			args = obj
 		}else{
-			ArgsType[1] = argsutils.BYTES
-			args[1] = pub.GetMsg()
+			log.Debug("msg should be unmarshal as json : %s", string(pub.GetMsg()))
+			if msgid != "" {
+				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("The JSON format is incorrect"))
+			}
+			return
 		}
 		hash := ""
 		if a.session.GetUserid() != "" {
@@ -198,32 +192,13 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			return
 		}
 		if msgid != "" { //msgid means the flag of the msg(call)
-			ArgsType[0] = RPC_PARAM_SESSION_TYPE
-			b, err := a.GetSession().Serializable()
-			if err!=nil{
-				return
-			}
-			args[0] = b
 			//...something wrong
-			arg1, err := argsutils.Bytes2Args(a.gate.GetApp(), ArgsType[1], args[1])
-			if err != nil {
-				log.Error("argsutils.Bytes2Args error : %s", err.Error())
-				return
-			}
-			log.Info("%s, %v", ArgsType[1] ,arg1 )
-			result, err := moduleSession.GetClient().Call(topics[1], 5, a.GetSession(), arg1) //在此调用RPC。--dming
+			result, err := moduleSession.Call(topics[1], 5, a.GetSession(), args) //在此调用RPC。--dming
 			log.Info("call %s, result is %v, err is %v", topics[1], result, err)
 			toResult(a, *pub.GetTopic(), result, err) //返回结果给客户端
 			//...
 		}else{
-			ArgsType[0]=RPC_PARAM_SESSION_TYPE
-			b,err:=a.GetSession().Serializable()
-			if err!=nil{
-				return
-			}
-			args[0]=b
-
-			_, e := moduleSession.GetClient().Call(topics[1], 5, ArgsType, args)
+			_, e := moduleSession.Call(topics[1], 5, a.GetSession(), args)
 			if e!=nil{
 				log.Warning("Gate RPC",e.Error())
 			}

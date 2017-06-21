@@ -12,14 +12,14 @@ type moduleSession struct {
 	Id string
 	App module.AppInterface
 	Type string
-	RpcClient rpc.Client
+	rpcClient rpc.Client
 }
 
-func NewModuleSession(app module.AppInterface, id string, typ string, chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) (module.ModuleSession, error) {
+func NewModuleSession(app module.AppInterface, id string, Type string, chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) (module.ModuleSession, error) {
 	m := new(moduleSession)
 	m.App = app
 	m.Id = id
-	m.Type = typ
+	m.Type = Type
 	err := m.CreateClient(chanCall, info)
 	return m, err
 }
@@ -27,13 +27,13 @@ func NewModuleSession(app module.AppInterface, id string, typ string, chanCall c
 
 func (m *moduleSession) CreateClient(chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) error {
 	var err error
-	m.RpcClient = baserpc.NewClient()
+	m.rpcClient = baserpc.NewClient()
 	if err != nil {
 		fmt.Printf("error in moduleSession.CreateClient, %s", err.Error())
 		return err
 	}
 	if chanCall != nil {
-		m.RpcClient.AttachChanCall(chanCall)
+		m.rpcClient.AttachChanCall(chanCall)
 	}
 	if info != nil {
 		mqClient, err := baserpc.NewMqClient(m.App, info)
@@ -41,7 +41,7 @@ func (m *moduleSession) CreateClient(chanCall chan *rpc.CallInfo, info *conf.Rab
 			fmt.Printf("error in moduleSession.CreateClient, %s", err.Error())
 			return err
 		}
-		m.RpcClient.AttachMqClient(mqClient)
+		m.rpcClient.AttachMqClient(mqClient)
 	}
 	return err
 }
@@ -56,6 +56,15 @@ func (m *moduleSession) GetType () string {
 }
 
 func (m *moduleSession) GetClient () rpc.Client {
-	return m.RpcClient
+	return m.rpcClient
+}
+
+
+func (m *moduleSession) Call (id string, timeout int, args ...interface{} ) (*rpc.RetInfo, error) {
+	return m.rpcClient.Call(id, timeout, args...)
+}
+
+func (m *moduleSession) AsynCall (id string, args ...interface{} ) (chan *rpc.RetInfo, error) {
+	return m.rpcClient.AsynCall(id, args...)
 }
 

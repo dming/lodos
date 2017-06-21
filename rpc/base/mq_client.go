@@ -112,7 +112,7 @@ func (c *mqClient) Call(ci *rpc.CallInfo) error {
 	clientCallInfo := &ClientCallInfo {
 		flag: 		flag,
 		chanRet: 	ci.ChanRet,
-		timeout:    time.Now().UnixNano() + 60 * 1000 * 1000, //统一设置成最长超时时间一分钟
+		timeout:    time.Now().UnixNano() + int64(time.Second * 60), //60 * 1000 * 1000, //统一设置成最长超时时间一分钟
 	}
 	c.callInfos[flag] = clientCallInfo
 
@@ -132,7 +132,7 @@ func (c *mqClient) Call(ci *rpc.CallInfo) error {
 		},
 	); err != nil {
 		//log.Warning("Exchange Publish: %s", err)
-		fmt.Printf("Exchange Publish: %s", err)
+		log.Warning("Exchange Publish: %s", err)
 		return err
 	}
 	return nil

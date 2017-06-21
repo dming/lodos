@@ -1,6 +1,6 @@
 syntax = "proto3";
 package gate;
-message session {
+message sessionpb {
     string IP = 1;
     string Network = 2;
     string Userid = 3;

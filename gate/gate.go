@@ -124,7 +124,7 @@ func (gate *Gate) OnInit(app module.AppInterface, settings conf.ModuleSettings) 
 
 	handler := NewGateHandler(gate)
 
-	gate.agentLearner = handler
+	gate.agentLearner = handler.(AgentLearner)
 	gate.handler = handler
 
 	gate.GetServer().GetRpcServer().Register("Update", gate.handler.Update)

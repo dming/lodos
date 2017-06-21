@@ -32,7 +32,7 @@ type Client interface {
 	AttachChanCall(chanCall chan *CallInfo)
 	AttachMqClient(mqClient MqClient)
 	Call(id string, timeout int, args ...interface{}) (*RetInfo , error)
-	AsynCall(id string, args...interface{}) (chan *RetInfo, error)
+	AsynCall(id string, args ...interface{}) (chan *RetInfo, error)
 	Close() error
 }
 

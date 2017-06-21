@@ -80,7 +80,7 @@ func ArgsTypeAnd2Bytes(app module.AppInterface, arg interface{}) (string,[]byte,
 	}
 }
 
-func Bytes2Args(app module.AppInterface, argsType string,args []byte )(interface{},error){
+func Bytes2Args (app module.AppInterface, argsType string,args []byte ) (interface{}, error){
 	switch argsType {
 	case NULL:
 		return nil,nil

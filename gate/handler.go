@@ -20,13 +20,20 @@ import (
 )
 
 type handler struct {
-	AgentLearner
-	GateHandler
+	//AgentLearner
+	//GateHandler
 	gate     *Gate
 	sessions *utils.BeeMap //连接列表
 }
 
-func NewGateHandler(gate *Gate) *handler {
+func testAsAgentLearner() AgentLearner {
+	handler := &handler{
+		sessions: utils.NewBeeMap(),
+	}
+	return handler
+}
+
+func NewGateHandler(gate *Gate) GateHandler {
 	handler := &handler{
 		gate:     gate,
 		sessions: utils.NewBeeMap(),
@@ -51,10 +58,10 @@ func (h *handler) DisConnect(a Agent) {
 /**
  *更新整个Session 通常是其他模块拉取最新数据
  */
-func (h *handler) Update(Sessionid string) (result Session, err string) {
+func (h *handler) Update(Sessionid string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	result = agent.(Agent).GetSession()
@@ -103,10 +110,11 @@ func (h *handler) Bind(Sessionid string, Userid string) (result Session, err err
 /**
  *UnBind the session with the the Userid.
  */
-func (h *handler) UnBind(Sessionid string) (result Session, err string) {
+func (h *handler) UnBind(Sessionid string) (result Session, err error) {
+	log.Debug("UnBind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	agent.(Agent).GetSession().SetUserid("")
@@ -117,14 +125,16 @@ func (h *handler) UnBind(Sessionid string) (result Session, err string) {
 /**
  *Push the session with the the Userid.
  */
-func (h *handler) Push(Sessionid string, Settings map[string]string) (result Session, err string) {
+func (h *handler) Push(Sessionid string, Settings map[string]string) (result Session, err error) {
+	log.Debug("Push call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	agent.(Agent).GetSession().SetSettings(Settings)
 	result = agent.(Agent).GetSession()
+
 	if h.gate.storage != nil && agent.(Agent).GetSession().GetUserid() != "" {
 		err := h.gate.storage.Storage(agent.(Agent).GetSession().GetUserid(), agent.(Agent).GetSession().GetSettings())
 		if err != nil {
@@ -138,10 +148,10 @@ func (h *handler) Push(Sessionid string, Settings map[string]string) (result Ses
 /**
  *Set values (one or many) for the session.
  */
-func (h *handler) Set(Sessionid string, key string, value string) (result Session, err string) {
+func (h *handler) Set(Sessionid string, key string, value string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	agent.(Agent).GetSession().GetSettings()[key] = value
@@ -160,10 +170,10 @@ func (h *handler) Set(Sessionid string, key string, value string) (result Sessio
 /**
  *Remove value from the session.
  */
-func (h *handler) Remove(Sessionid string, key string) (result interface{}, err string) {
+func (h *handler) Remove(Sessionid string, key string) (result interface{}, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	delete(agent.(Agent).GetSession().GetSettings(), key)
@@ -182,15 +192,16 @@ func (h *handler) Remove(Sessionid string, key string) (result interface{}, err 
 /**
  *Send message to the session.
  */
-func (h *handler) Send(Sessionid string, topic string, body []byte) (result interface{}, err string) {
+func (h *handler) Send(Sessionid string, topic string, body []byte) (result interface{}, err error) {
+	log.Debug("Send call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	e := agent.(Agent).WriteMsg(topic, body)
 	if e != nil {
-		err = e.Error()
+		err = e
 	} else {
 		result = "success"
 	}
@@ -200,10 +211,10 @@ func (h *handler) Send(Sessionid string, topic string, body []byte) (result inte
 /**
  *主动关闭连接
  */
-func (h *handler) Close(Sessionid string) (result interface{}, err string) {
+func (h *handler) Close(Sessionid string) (result interface{}, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
-		err = "No Sesssion found"
+		err = fmt.Errorf("No Sesssion found")
 		return
 	}
 	agent.(Agent).Close()

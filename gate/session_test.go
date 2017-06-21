@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 func TestSession(t *testing.T) {
-	s := &session{        // 使用辅助函数设置域的值
+	s := &sessionpb{        // 使用辅助函数设置域的值
 		IP: *proto.String("127.0.0.1"),
 		Network:  *proto.String("tcp"),
 		Sessionid:  *proto.String("iii"),
@@ -28,19 +28,19 @@ func TestSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshaling error: ", err)
 	}    // 进行解码
-	newSession := &session{}
-	err = proto.Unmarshal(data, newSession)
+	newSessionpb := &sessionpb{}
+	err = proto.Unmarshal(data, newSessionpb)
 	if err != nil {
 		t.Fatalf("unmarshaling error: ", err)
 	}    // 测试结果
-	if s.Serverid != newSession.GetServerid() {
-		t.Fatalf("data mismatch %q != %q", s.GetServerid(), newSession.GetServerid())
+	if s.Serverid != newSessionpb.GetServerid() {
+		t.Fatalf("data mismatch %q != %q", s.GetServerid(), newSessionpb.GetServerid())
 	}
-	if newSession.GetSettings()==nil{
+	if newSessionpb.GetSettings()==nil{
 		t.Fatalf("data mismatch Settings == nil")
 	}else{
-		if newSession.GetSettings()["isLogin"]!="true"{
-			t.Fatalf("data mismatch %q != %q", s.GetSettings()["isLogin"], newSession.GetSettings()["isLogin"])
+		if newSessionpb.GetSettings()["isLogin"]!="true"{
+			t.Fatalf("data mismatch %q != %q", s.GetSettings()["isLogin"], newSessionpb.GetSettings()["isLogin"])
 		}
 	}
 
