@@ -240,8 +240,8 @@ func (session *session) Push() (error) {
 		return fmt.Errorf("Module.App is nil")
 	}
 
-	server, e := session.app.GetServerById(session.sessionpb.Serverid)
-	if e != nil {
+	server, err := session.app.GetServerById(session.sessionpb.Serverid)
+	if err != nil {
 		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
 

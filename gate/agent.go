@@ -206,25 +206,26 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 
 		if a.GetSession().GetUserid() != "" {
 			//这个链接已经绑定Userid
-			interval := time.Now().UnixNano()/1000000/1000 - a.last_storage_heartbeat_data_time //单位秒
+			interval := time.Now().UnixNano()/1000 /1000 /1000 - a.last_storage_heartbeat_data_time //单位秒
 			if interval > a.gate.MinStorageHeartbeat {
 				//如果用户信息存储心跳包的时长已经大于一秒
 				if a.gate.storage != nil {
 					a.gate.storage.Heartbeat(a.GetSession().GetUserid())
-					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000000 / 1000
+					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000 / 1000 / 1000
 				}
 			}
 		}
 	case mqtt.PINGREQ:
+		log.Debug("Get mqtt.PINGREQ package")
 		//客户端发送的心跳包
 		if a.GetSession().GetUserid() != "" {
 			//这个链接已经绑定Userid
-			interval := time.Now().UnixNano()/1000000/1000 - a.last_storage_heartbeat_data_time //单位秒
+			interval := time.Now().UnixNano()/1000 /1000 /1000 - a.last_storage_heartbeat_data_time //单位秒
 			if interval > a.gate.MinStorageHeartbeat {
 				//如果用户信息存储心跳包的时长已经大于60秒
 				if a.gate.storage != nil {
 					a.gate.storage.Heartbeat(a.GetSession().GetUserid())
-					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000000 / 1000
+					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000 /1000 / 1000
 				}
 			}
 		}

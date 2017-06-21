@@ -72,6 +72,12 @@ func (h *handler) Update(Sessionid string) (result Session, err error) {
  *Bind the session with the the Userid.
  */
 func (h *handler) Bind(Sessionid string, Userid string) (result Session, err error) {
+	defer func() {
+		if r := recover(); r != nil{
+			log.Error("Error in Bind [%s]", r)
+		}
+	}()
+
 	log.Debug("bind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
@@ -88,14 +94,20 @@ func (h *handler) Bind(Sessionid string, Userid string) (result Session, err err
 			if agent.(Agent).GetSession().GetSettings() == nil {
 				agent.(Agent).GetSession().SetSettings(settings)
 			} else {
+				//这里是进程不安全的，所以需要把Settings换成进程安全的BeeMap的具体变种 --dming
+
 				//合并两个map 并且以 agent.(Agent).GetSession().Settings 已有的优先
+				/*
+				var tempSettings map[string]string
+				tempSettings = agent.(Agent).GetSession().GetSettings()
 				for k, v := range settings {
-					if _, ok := agent.(Agent).GetSession().GetSettings()[k]; ok {
+					if _, ok := tempSettings[k]; ok {
 						//不用替换
 					} else {
-						agent.(Agent).GetSession().GetSettings()[k] = v
+						tempSettings[k] = v
 					}
 				}
+				agent.(Agent).GetSession().SetSettings(tempSettings)*/
 				//数据持久化
 				h.gate.storage.Storage(Userid, agent.(Agent).GetSession().GetSettings())
 
