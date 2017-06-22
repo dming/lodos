@@ -197,14 +197,17 @@ func (session *session) Bind(Userid string) (error) {
 	}
 
 	result, err := server.Call("Bind", 5,  session.sessionpb.Sessionid, Userid)
-	log.Debug("in Bind, result is : %v", result)
+	//log.Debug("in Bind, result is : %v", result)
 	if err != nil {
 		return err
 	}
 	if result != nil && len(result.Ret) > 0 {
+		if _, ok := result.Ret[0].(Session); !ok {
+			return fmt.Errorf("can not convert result.Ret[0] to session")
+		}
 		session.update(result.Ret[0].(Session))
 	}
-	return err
+	return nil
 }
 
 func (session *session) UnBind() (error) {

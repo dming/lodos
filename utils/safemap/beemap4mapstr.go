@@ -12,30 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package safemap
 
 import (
 	"sync"
-	log "github.com/dming/lodos/mlog"
-	"reflect"
 )
 
 // BeeMap is a map with lock
-type BeeMap struct {
+type BeeMap4MapStr struct {
 	lock *sync.RWMutex
-	bm   map[interface{}]interface{}
+	bm   map[string]*BeeMap4String
 }
 
 // NewBeeMap return new safemap
-func NewBeeMap() *BeeMap {
-	return &BeeMap{
+func NewBeeMap4MapStr() *BeeMap4MapStr {
+	return &BeeMap4MapStr{
 		lock: new(sync.RWMutex),
-		bm:   make(map[interface{}]interface{}),
+		bm:   map[string]*BeeMap4String{},
 	}
 }
 
 // Get from maps return the k's value
-func (m *BeeMap) Get(k interface{}) interface{} {
+func (m *BeeMap4MapStr) Get(k string) *BeeMap4String {
 	m.lock.RLock()
 	//defer m.lock.RUnlock()
 
@@ -49,41 +47,27 @@ func (m *BeeMap) Get(k interface{}) interface{} {
 
 // Set Maps the given key and value. Returns false
 // if the key is already in the map and changes nothing.
-func (m *BeeMap) Set(k interface{}, v interface{}) bool {
+func (m *BeeMap4MapStr) Set(k string, v *BeeMap4String) {
 	m.lock.Lock()
-	//defer m.lock.Unlock()
-
-	if val, ok := m.bm[k]; !ok {
-		log.Debug("add beemap set")
-		m.bm[k] = v
-		m.lock.Unlock()
-	} else if reflect.ValueOf(val) != reflect.ValueOf(v) {
-		log.Debug("update beemap set, %s" , reflect.ValueOf(v))
-		m.bm[k] = v
-		m.lock.Unlock()
-	} else {
-		log.Debug("no-op beemap set")
-		m.lock.Unlock()
-		return false
-	}
-	return true
+	m.bm[k] = v
+	m.lock.Unlock()
 }
 
 // Check Returns true if k is exist in the map.
-func (m *BeeMap) Check(k interface{}) bool {
+func (m *BeeMap4MapStr) Check(k string) bool {
 	m.lock.RLock()
 	//defer m.lock.RUnlock()
 
-	if _, ok := m.bm[k]; !ok {
+	if _, ok := m.bm[k]; ok {
 		m.lock.RUnlock()
-		return false
+		return true
 	}
 	m.lock.RUnlock()
-	return true
+	return false
 }
 
 // Delete the given key and value.
-func (m *BeeMap) Delete(k interface{}) {
+func (m *BeeMap4MapStr) Delete(k string) {
 	m.lock.Lock()
 	//defer m.lock.Unlock()
 
@@ -92,13 +76,13 @@ func (m *BeeMap) Delete(k interface{}) {
 }
 
 // Items returns all items in safemap.
-func (m *BeeMap) Items() map[interface{}]interface{} {
+func (m *BeeMap4MapStr) Items() map[string]map[string]string {
 	m.lock.RLock()
 	//defer m.lock.RUnlock()
 
-	r := make(map[interface{}]interface{})
+	r := make(map[string]map[string]string)
 	for k, v := range m.bm {
-		r[k] = v
+		r[k] = v.bm
 	}
 	m.lock.RUnlock()
 	return r

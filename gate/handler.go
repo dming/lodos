@@ -15,7 +15,7 @@ package gate
 
 import (
 	log "github.com/dming/lodos/mlog"
-	"github.com/dming/lodos/utils"
+	"github.com/dming/lodos/utils/safemap"
 	"fmt"
 )
 
@@ -23,12 +23,12 @@ type handler struct {
 	//AgentLearner
 	//GateHandler
 	gate     *Gate
-	sessions *utils.BeeMap //连接列表
+	sessions *safemap.BeeMap //连接列表
 }
 
 func testAsAgentLearner() AgentLearner {
 	handler := &handler{
-		sessions: utils.NewBeeMap(),
+		sessions: safemap.NewBeeMap(),
 	}
 	return handler
 }
@@ -36,7 +36,7 @@ func testAsAgentLearner() AgentLearner {
 func NewGateHandler(gate *Gate) GateHandler {
 	handler := &handler{
 		gate:     gate,
-		sessions: utils.NewBeeMap(),
+		sessions: safemap.NewBeeMap(),
 	}
 	return handler
 }
@@ -78,52 +78,33 @@ func (h *handler) Bind(Sessionid string, Userid string) (result Session, err err
 		}
 	}()
 
-	log.Debug("bind call")
+	//log.Debug("bind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
-		return
+		return nil, err
 	}
 	agent.(Agent).GetSession().SetUserid(Userid)
 
 	if h.gate.storage != nil && agent.(Agent).GetSession().GetUserid() != "" {
 		//可以持久化
-		settings, err := h.gate.storage.Query(Userid)
-		if err == nil && settings != nil {
-			//有已持久化的数据,可能是上一次连接保存的
-			if agent.(Agent).GetSession().GetSettings() == nil {
-				agent.(Agent).GetSession().SetSettings(settings)
-			} else {
-				//这里是进程不安全的，所以需要把Settings换成进程安全的BeeMap的具体变种 --dming
 
-				//合并两个map 并且以 agent.(Agent).GetSession().Settings 已有的优先
-				/*
-				var tempSettings map[string]string
-				tempSettings = agent.(Agent).GetSession().GetSettings()
-				for k, v := range settings {
-					if _, ok := tempSettings[k]; ok {
-						//不用替换
-					} else {
-						tempSettings[k] = v
-					}
-				}
-				agent.(Agent).GetSession().SetSettings(tempSettings)*/
-				//数据持久化
-				h.gate.storage.Storage(Userid, agent.(Agent).GetSession().GetSettings())
+		//这里是进程不安全的，所以不能直接操作已有的Map，只能复制后再操作，操作完毕后再赋值回去。
+		// 引用指针也不行，所以不能使用 :=   --dming --已经删除了该段代码
 
-			}
-		}
+		//数据持久化，直接调用这个函数，不要自己处理了。
+		h.gate.storage.Storage(Userid, agent.(Agent).GetSession().GetSettings())
 	}
 
 	result = agent.(Agent).GetSession()
-	return
+	return result, nil
 }
 
 /**
  *UnBind the session with the the Userid.
  */
 func (h *handler) UnBind(Sessionid string) (result Session, err error) {
-	log.Debug("UnBind call")
+	//log.Debug("UnBind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
@@ -138,7 +119,7 @@ func (h *handler) UnBind(Sessionid string) (result Session, err error) {
  *Push the session with the the Userid.
  */
 func (h *handler) Push(Sessionid string, Settings map[string]string) (result Session, err error) {
-	log.Debug("Push call")
+	//log.Debug("Push call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
@@ -205,7 +186,7 @@ func (h *handler) Remove(Sessionid string, key string) (result interface{}, err 
  *Send message to the session.
  */
 func (h *handler) Send(Sessionid string, topic string, body []byte) (result interface{}, err error) {
-	log.Debug("Send call")
+	//log.Debug("Send call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
