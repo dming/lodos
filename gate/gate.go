@@ -57,13 +57,13 @@ func (gate *Gate)OnConfChanged(settings *conf.ModuleSettings)  {
 自定义rpc参数序列化反序列化  Session
  */
 func (gate *Gate)Serialize(param interface{})(ptype string,p []byte, err error){
-	switch v2:=param.(type) {
+	switch v2 := param.(type) {
 	case Session:
-		bytes,err:=v2.Serializable()
+		bytes, err := v2.Serializable()
 		if err != nil{
-			return RPC_PARAM_SESSION_TYPE,nil,err
+			return RPC_PARAM_SESSION_TYPE, nil, err
 		}
-		return RPC_PARAM_SESSION_TYPE,bytes,nil
+		return RPC_PARAM_SESSION_TYPE, bytes, nil
 	default:
 		return "", nil,fmt.Errorf("args [%s] Types not allowed",reflect.TypeOf(param))
 	}
@@ -130,7 +130,7 @@ func (gate *Gate) OnInit(app module.AppInterface, settings conf.ModuleSettings) 
 	gate.GetServer().GetRpcServer().Register("Update", gate.handler.Update)
 	gate.GetServer().GetRpcServer().Register("Bind", gate.handler.Bind)
 	gate.GetServer().GetRpcServer().Register("UnBind", gate.handler.UnBind)
-	gate.GetServer().GetRpcServer().Register("Push", gate.handler.Push)
+	gate.GetServer().GetRpcServer().Register("PushSettings", gate.handler.PushSettings)
 	gate.GetServer().GetRpcServer().Register("Set", gate.handler.Set)
 	gate.GetServer().GetRpcServer().Register("Remove", gate.handler.Remove)
 	gate.GetServer().GetRpcServer().Register("Send", gate.handler.Send)

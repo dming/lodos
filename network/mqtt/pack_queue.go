@@ -31,7 +31,7 @@ type PackQueue struct {
 	// Notice read the error
 	errorChan chan error
 	noticeFin chan byte
-	writeChan chan *pakcAdnType
+	writeChan chan *pakcAndType
 	readChan  chan<- *packAndErr
 	// Pack connection
 	r *bufio.Reader
@@ -54,7 +54,7 @@ const (
 	FLUSH
 )
 
-type pakcAdnType struct {
+type pakcAndType struct {
 	pack *Pack
 	typ  byte
 }
@@ -72,7 +72,7 @@ func NewPackQueue(conf conf.Mqtt, r *bufio.Reader, w *bufio.Writer, conn network
 		w:         w,
 		conn:      conn,
 		noticeFin: make(chan byte, 2),
-		writeChan: make(chan *pakcAdnType, conf.WirteLoopChanNum),
+		writeChan: make(chan *pakcAndType, conf.WirteLoopChanNum),
 		readChan:  readChan,
 		errorChan: make(chan error, 1),
 	}
@@ -122,7 +122,7 @@ func (queue *PackQueue) WritePack(pack *Pack) error {
 	if queue.writeError != nil {
 		return queue.writeError
 	}
-	queue.writeChan <- &pakcAdnType{pack: pack}
+	queue.writeChan <- &pakcAndType{pack: pack}
 	return nil
 }
 
@@ -130,7 +130,7 @@ func (queue *PackQueue) WriteDelayPack(pack *Pack) error {
 	if queue.writeError != nil {
 		return queue.writeError
 	}
-	queue.writeChan <- &pakcAdnType{
+	queue.writeChan <- &pakcAndType{
 		pack: pack,
 		typ:  DELAY,
 	}
@@ -150,7 +150,7 @@ func (queue *PackQueue) Flush() error {
 	if queue.writeError != nil {
 		return queue.writeError
 	}
-	queue.writeChan <- &pakcAdnType{typ: FLUSH}
+	queue.writeChan <- &pakcAndType{typ: FLUSH}
 	return nil
 }
 
@@ -199,7 +199,7 @@ func (queue *PackQueue) ReadPackInLoop() {
 					// Without anything to do
 				case <-queue.noticeFin:
 					//queue.Close()
-					log.Info("Queue FIN")
+					log.Info("Queue FIN(finish)")
 					break loop
 				}
 			} else {

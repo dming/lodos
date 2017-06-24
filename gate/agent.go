@@ -41,6 +41,7 @@ func (a *agent) GetSession() Session {
 	return a.session
 }
 
+//as function init， call in tcp_server and ws_server
 func (a *agent) Run() (err error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -72,7 +73,7 @@ func (a *agent) Run() (err error) {
 	//log.Debug("Read login pack %s %s %s %s",*id,*psw,info.GetProtocol(),info.GetVersion())
 	c := mqtt.NewClient(conf.Conf.Mqtt, a, a.r, a.w, a.conn, info.GetKeepAlive())
 	a.client = c
-	a.session,err= NewSessionByMap(a.gate.App, map[string]interface{}{
+	a.session,err = NewSessionByMap(a.gate.App, map[string]interface{}{
 		"Sessionid": Get_uuid(),
 		"Network":   a.conn.RemoteAddr().Network(),
 		"IP":        a.conn.RemoteAddr().String(),
@@ -83,7 +84,7 @@ func (a *agent) Run() (err error) {
 		log.Error("gate create agent fail",err.Error())
 		return
 	}
-	a.gate.agentLearner.Connect(a) //发送连接成功的事件
+	a.gate.agentLearner.Connect(a) //发送连接成功的事件, 添加到连接列表, 即 handler sessions
 
 	//回复客户端 CONNECT
 	err = mqtt.WritePack(mqtt.GetConnAckPack(0), a.w)
@@ -140,7 +141,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 	//路由服务
 	switch pack.GetType() {
 	case mqtt.PUBLISH:
-		a.rev_num=a.rev_num+1
+		a.rev_num++
 		pub := pack.GetVariable().(*mqtt.Publish)
 		topics := strings.Split(*pub.GetTopic(), "/")
 		var msgid string

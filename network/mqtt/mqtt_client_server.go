@@ -48,11 +48,11 @@ type Client struct {
 	curr_id int
 }
 
-func NewClient(conf conf.Mqtt, recover PackRecover, r *bufio.Reader, w *bufio.Writer, conn network.Conn, alive int) *Client {
-	readChan := make(chan *packAndErr, conf.ReadPackLoop)
+func NewClient(mqttConf conf.Mqtt, recover PackRecover, r *bufio.Reader, w *bufio.Writer, conn network.Conn, alive int) *Client {
+	readChan := make(chan *packAndErr, mqttConf.ReadPackLoop)
 	return &Client{
 		readChan:  readChan,
-		queue:     NewPackQueue(conf, r, w, conn, readChan, alive),
+		queue:     NewPackQueue(mqttConf, r, w, conn, readChan, alive),
 		recover:   recover,
 		closeChan: make(chan byte),
 		lock:      new(sync.Mutex),
@@ -85,7 +85,7 @@ loop:
 		select {
 		case pAndErr, ok := <-c.readChan:
 			if !ok {
-				log.Info("Get a connection error")
+				log.Info("Get a connection error, will break(%s).", "Read from c.readChan is !ok")
 				break loop
 			}
 			if err = c.waitPack(pAndErr); err != nil {
@@ -202,7 +202,7 @@ func (c *Client) waitPack(pAndErr *packAndErr) (err error) {
 		c.recover.OnRecover(pAndErr.pack)
 	case PINGREQ:
 		// Reply the heart beat
-		log.Debug("hb msg PINGREQ")
+		log.Debug("heartbeats msg PINGREQ")
 		err = c.queue.WritePack(GetPingResp(1, pAndErr.pack.GetDup()))
 		c.recover.OnRecover(pAndErr.pack)
 	default:

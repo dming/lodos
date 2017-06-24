@@ -5,36 +5,43 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/dming/lodos/module"
 	log "github.com/dming/lodos/mlog"
+	"sync"
+	"reflect"
 )
 
 type session struct {
 	app       module.AppInterface
 	sessionpb   *sessionpb
+	lock *sync.RWMutex
 }
 
+
+
 func NewSession(app module.AppInterface, data []byte) (Session,error) {
-	agent:=&session{
-		app:app,
+	s := &session{
+		app : app,
+		lock : new(sync.RWMutex),
 	}
 	se := &sessionpb{}
 	err := proto.Unmarshal(data, se)
 	if err != nil {
 		return nil,err
 	}    // 测试结果
-	agent.sessionpb = se
-	return agent,nil
+	s.sessionpb = se
+	return s,nil
 }
 
 func NewSessionByMap(app module.AppInterface, data map[string]interface{}) (Session,error) {
-	agent:=&session{
+	s:=&session{
 		app:app,
 		sessionpb:new(sessionpb),
+		lock : new(sync.RWMutex),
 	}
-	err := agent.updateMap(data)
+	err := s.updateMap(data)
 	if err != nil{
 		return nil, err
 	}
-	return agent, nil
+	return s, nil
 }
 
 func (session *session) GetIP() string {
@@ -92,27 +99,39 @@ func (session *session) updateMap(s map[string]interface{}) error {
 
 	Userid := s["Userid"]
 	if Userid != nil {
-		session.sessionpb.Userid = Userid.(string)
+		if result, ok := Userid.(string); ok {
+			session.sessionpb.Userid = result
+		}
 	}
 	IP := s["IP"]
 	if IP != nil {
-		session.sessionpb.IP = IP.(string)
+		if result, ok := IP.(string); ok {
+			session.sessionpb.IP = result
+		}
 	}
 	Network := s["Network"]
 	if Network != nil {
-		session.sessionpb.Network = Network.(string)
+		if result, ok := Network.(string); ok {
+			session.sessionpb.Network = result
+		}
 	}
 	Sessionid := s["Sessionid"]
 	if Sessionid != nil {
-		session.sessionpb.Sessionid = Sessionid.(string)
+		if result, ok := Sessionid.(string); ok {
+			session.sessionpb.Sessionid = result
+		}
 	}
 	Serverid := s["Serverid"]
 	if Serverid != nil {
-		session.sessionpb.Serverid = Serverid.(string)
+		if result, ok := Serverid.(string); ok {
+			session.sessionpb.Serverid = result
+		}
 	}
 	Settings := s["Settings"]
 	if Settings != nil {
-		session.sessionpb.Settings = Settings.(map[string]string)
+		if result, ok := Settings.(map[string]string); ok {
+			session.sessionpb.Settings = result
+		}
 	}
 	return err
 }
@@ -137,6 +156,7 @@ func (session *session) update (s Session) error {
 	session.sessionpb.Serverid = s.GetServerid()
 
 	session.sessionpb.Settings = s.GetSettings()
+
 	return err
 }
 
@@ -164,7 +184,7 @@ func (session *session) Update() (error) {
 
 	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("Service not found id(%s)", session.sessionpb.GetServerid())
+		return fmt.Errorf("In Update, Service not found id(%s)", session.sessionpb.GetServerid())
 	}
 
 	result, err := server.Call("Update", 5, session.sessionpb.GetSessionid())
@@ -172,8 +192,12 @@ func (session *session) Update() (error) {
 		return err
 	}
 	if result != nil && len(result.Ret) > 0 {
-		//绑定成功,重新更新当前Session
-		session.update(result.Ret[0].(Session))
+		//成功,重新更新当前Session
+		if r, ok := result.Ret[0].(Session); ok {
+			session.update(r)
+		} else {
+			return fmt.Errorf("can not convert result.Ret[0] to session")
+		}
 	}
 	return err
 }
@@ -191,9 +215,9 @@ func (session *session) Bind(Userid string) (error) {
 		return fmt.Errorf("Module.App is nil")
 	}
 
-	server, err := session.app.GetServerById(session.sessionpb.Serverid)
+	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
+		return fmt.Errorf("in Bind, Service not found id(%s)", session.sessionpb.GetServerid())
 	}
 
 	result, err := server.Call("Bind", 5,  session.sessionpb.Sessionid, Userid)
@@ -202,12 +226,13 @@ func (session *session) Bind(Userid string) (error) {
 		return err
 	}
 	if result != nil && len(result.Ret) > 0 {
-		if _, ok := result.Ret[0].(Session); !ok {
-			return fmt.Errorf("can not convert result.Ret[0] to session")
+		if r, ok := result.Ret[0].(Session); ok {
+			session.update(r)
+		} else {
+			return fmt.Errorf("%s can not convert result.Ret[0] to Session", reflect.TypeOf(result.Ret[0]).String())
 		}
-		session.update(result.Ret[0].(Session))
 	}
-	return nil
+	return err
 }
 
 func (session *session) UnBind() (error) {
@@ -222,23 +247,27 @@ func (session *session) UnBind() (error) {
 	if session.app == nil {
 		return fmt.Errorf("Module.App is nil")
 	}
-	server, err := session.app.GetServerById(session.sessionpb.Serverid)
+	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("Service not found id(%s), err is %s", session.sessionpb.Serverid, err)
+		return fmt.Errorf("In UnBind ,Service not found id(%s), err is %s", session.sessionpb.GetServerid(), err)
 	}
 
 	result, err := server.GetClient().Call("UnBind", 5, session.sessionpb.Sessionid)
 	if err != nil {
 		return err
 	}
-	if result != nil  && len(result.Ret) > 0 {
-		//绑定成功,重新更新当前Session
-		session.update(result.Ret[0].(Session))
+	if result != nil && len(result.Ret) > 0 {
+		if r, ok := result.Ret[0].(Session); ok {
+			//绑定成功,重新更新当前Session
+			session.update(r)
+		} else {
+			return fmt.Errorf("can not convert result.Ret[0] to session")
+		}
 	}
 	return err
 }
 
-func (session *session) Push() (error) {
+func (session *session) PushSettings() (error) {
 	if session.app == nil {
 		return fmt.Errorf("Module.App is nil")
 	}
@@ -248,13 +277,17 @@ func (session *session) Push() (error) {
 		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
 
-	result, err := server.GetClient().Call("Push", 5, session.sessionpb.Sessionid, session.sessionpb.Settings)
+	result, err := server.GetClient().Call("PushSettings", 5, session.sessionpb.Sessionid, session.sessionpb.Settings)
 	if err != nil {
 		return err
 	}
-	if result != nil  && len(result.Ret) > 0 {
-		//绑定成功,重新更新当前Session
-		session.update(result.Ret[0].(Session))
+	if result != nil && len(result.Ret) > 0 {
+		if r, ok := result.Ret[0].(Session); ok {
+			//绑定成功,重新更新当前Session
+			session.update(r)
+		} else {
+			return fmt.Errorf("can not convert result.Ret[0] to session")
+		}
 	}
 	return err
 }
@@ -265,9 +298,11 @@ func (session *session) Set(key string, value string) (error) {
 	}
 
 	if session.sessionpb.Settings == nil {
-		session.sessionpb.Settings=map[string]string{}
+		session.sessionpb.Settings = map[string]string{}
 	}
+	session.lock.Lock()
 	session.sessionpb.Settings[key] = value
+	session.lock.Unlock()
 	//server,e:=session.app.GetServersById(session.Serverid)
 	//if e!=nil{
 	//	err=fmt.Sprintf("Service not found id(%s)",session.Serverid)
@@ -287,7 +322,9 @@ func (session *session) Get(key string) (result string) {
 	if session.sessionpb.Settings == nil {
 		return
 	}
+	session.lock.RLock()
 	result = session.sessionpb.Settings[key]
+	session.lock.RUnlock()
 	return
 }
 
@@ -299,7 +336,9 @@ func (session *session) Remove(key string) (error) {
 	if session.sessionpb.Settings == nil {
 		session.sessionpb.Settings=map[string]string{}
 	}
+	session.lock.Lock()
 	delete(session.sessionpb.Settings, key)
+	session.lock.Unlock()
 	//server,e:=session.app.GetServersById(session.Serverid)
 	//if e!=nil{
 	//	err=fmt.Sprintf("Service not found id(%s)",session.Serverid)
@@ -314,6 +353,7 @@ func (session *session) Remove(key string) (error) {
 	//}
 	return nil
 }
+
 func (session *session) Send(topic string, body []byte) (error) {
 	if session.app == nil {
 		return fmt.Errorf("Module.App is nil")
@@ -322,6 +362,7 @@ func (session *session) Send(topic string, body []byte) (error) {
 	if e != nil {
 		return fmt.Errorf("Service not found id(%s)", session.sessionpb.Serverid)
 	}
+
 	_, err := server.Call("Send", 5, session.sessionpb.Sessionid, topic, body)
 	return err
 }
@@ -337,10 +378,7 @@ func (session *session) SendNR(topic string, body []byte) (error) {
 	}
 
 	_, err = server.GetClient().Call("Send", 5, session.sessionpb.Sessionid, topic, body)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (session *session) Close() (error) {

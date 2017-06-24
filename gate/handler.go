@@ -17,6 +17,7 @@ import (
 	log "github.com/dming/lodos/mlog"
 	"github.com/dming/lodos/utils/safemap"
 	"fmt"
+	"reflect"
 )
 
 type handler struct {
@@ -63,6 +64,9 @@ func (h *handler) Update(Sessionid string) (result Session, err error) {
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
 		return
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf(" In Update, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return nil, err
 	}
 	result = agent.(Agent).GetSession()
 	return
@@ -82,6 +86,9 @@ func (h *handler) Bind(Sessionid string, Userid string) (result Session, err err
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
+		return nil, err
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf(" In Bind, %s can not convert to Agent", reflect.TypeOf(agent).String())
 		return nil, err
 	}
 	agent.(Agent).GetSession().SetUserid(Userid)
@@ -109,6 +116,9 @@ func (h *handler) UnBind(Sessionid string) (result Session, err error) {
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
 		return
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In UnBind, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return
 	}
 	agent.(Agent).GetSession().SetUserid("")
 	result = agent.(Agent).GetSession()
@@ -118,12 +128,15 @@ func (h *handler) UnBind(Sessionid string) (result Session, err error) {
 /**
  *Push the session with the the Userid.
  */
-func (h *handler) Push(Sessionid string, Settings map[string]string) (result Session, err error) {
+func (h *handler) PushSettings(Sessionid string, Settings map[string]string) (result Session, err error) {
 	//log.Debug("Push call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
-		return
+		return nil, err
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In PushSettings, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return nil, err
 	}
 	agent.(Agent).GetSession().SetSettings(Settings)
 	result = agent.(Agent).GetSession()
@@ -145,9 +158,13 @@ func (h *handler) Set(Sessionid string, key string, value string) (result Sessio
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
-		return
+		return nil, err
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In Set, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return nil, err
 	}
-	agent.(Agent).GetSession().GetSettings()[key] = value
+	//agent.(Agent).GetSession().GetSettings()[key] = value
+	agent.(Agent).GetSession().Set(key, value)
 	result = agent.(Agent).GetSession()
 
 	if h.gate.storage != nil && agent.(Agent).GetSession().GetUserid() != "" {
@@ -163,13 +180,17 @@ func (h *handler) Set(Sessionid string, key string, value string) (result Sessio
 /**
  *Remove value from the session.
  */
-func (h *handler) Remove(Sessionid string, key string) (result interface{}, err error) {
+func (h *handler) Remove(Sessionid string, key string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
 		return
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In Remove, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return
 	}
-	delete(agent.(Agent).GetSession().GetSettings(), key)
+	//delete(agent.(Agent).GetSession().GetSettings(), key)
+	agent.(Agent).GetSession().Remove(key)
 	result = agent.(Agent).GetSession()
 
 	if h.gate.storage != nil && agent.(Agent).GetSession().GetUserid() != "" {
@@ -178,38 +199,38 @@ func (h *handler) Remove(Sessionid string, key string) (result interface{}, err 
 			log.Error("gate session storage failure")
 		}
 	}
-
 	return
 }
 
 /**
  *Send message to the session.
  */
-func (h *handler) Send(Sessionid string, topic string, body []byte) (result interface{}, err error) {
+func (h *handler) Send(Sessionid string, topic string, body []byte) (err error) {
 	//log.Debug("Send call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
 		return
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In Send, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return
 	}
-	e := agent.(Agent).WriteMsg(topic, body)
-	if e != nil {
-		err = e
-	} else {
-		result = "success"
-	}
-	return
+	err = agent.(Agent).WriteMsg(topic, body)
+	return err
 }
 
 /**
  *主动关闭连接
  */
-func (h *handler) Close(Sessionid string) (result interface{}, err error) {
+func (h *handler) Close(Sessionid string) (err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
 		return
+	} else if _, ok := agent.(Agent); !ok {
+		err = fmt.Errorf("In Close, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		return
 	}
 	agent.(Agent).Close()
-	return
+	return nil
 }

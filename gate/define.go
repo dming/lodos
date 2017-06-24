@@ -20,10 +20,10 @@ type GateHandler interface {
 	Bind(Sessionid string, Userid string) (result Session, err error)                   //Bind the session with the the Userid.
 	UnBind(Sessionid string) (result Session, err error)                                //UnBind the session with the the Userid.
 	Set(Sessionid string, key string, value string) (result Session, err error)    		//Set values (one or many) for the session.
-	Remove(Sessionid string, key string) (result interface{}, err error)                //Remove value from the session.
-	Push(Sessionid string, Settings map[string]string) (result Session, err error) 		//推送信息给Session
-	Send(Sessionid string, topic string, body []byte) (result interface{}, err error)   //Send message to the session.
-	Close(Sessionid string) (result interface{}, err error)                             //主动关闭连接
+	Remove(Sessionid string, key string) (result Session, err error)      				//Remove value from the session.
+	PushSettings(Sessionid string, Settings map[string]string) (result Session, err error) 		//推送信息给Session
+	Send(Sessionid string, topic string, body []byte) (err error)   					//Send message to the session.
+	Close(Sessionid string) (err error)                             					//主动关闭连接
 	Update(Sessionid string) (result Session, err error)                                //更新整个Session 通常是其他模块拉取最新数据
 }
 
@@ -44,7 +44,7 @@ type Session interface {
 	Update() (error)
 	Bind(Userid string) (error)
 	UnBind() (error)
-	Push() (error)
+	PushSettings() (error)
 	Set(key string, value string) (error)
 	Get(key string) (result string)
 	Remove(key string) (error)

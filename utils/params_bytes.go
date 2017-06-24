@@ -40,7 +40,7 @@ func IntToBytes(i int) []byte {
 }
 
 func BytesToInt(buf []byte) int {
-	return int(int32(binary.BigEndian.Uint32(buf)))
+	return int(binary.BigEndian.Uint32(buf))
 }
 
 func Int32ToBytes(i int32) []byte {
