@@ -80,7 +80,7 @@ func (a *agent) Run() (err error) {
 		"Serverid":  a.gate.GetServerId(),
 		"Settings":  make(map[string]string),
 	})
-	if err!=nil{
+	if err != nil{
 		log.Error("gate create agent fail",err.Error())
 		return
 	}

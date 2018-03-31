@@ -7,6 +7,7 @@ import (
 	"strings"
 	"encoding/json"
 	//log "github.com/dming/lodos/mlog"
+	"github.com/go-redis/redis"
 )
 
 var (
@@ -28,6 +29,10 @@ type Rabbitmq struct {
 	ConsumerTag  string //消费者TAG
 }
 
+type RedisInfo struct {
+	redis.Options
+}
+
 type Config struct {
 	Modules map[string][]*ModuleSettings
 	Mqtt   Mqtt
@@ -40,6 +45,7 @@ type ModuleSettings struct {
 	ProcessID string
 	Settings  map[string]interface{}
 	RabbitmqInfo *Rabbitmq
+	redisInfo *RedisInfo
 }
 
 type Mqtt struct {
@@ -54,7 +60,6 @@ func LoadConfig(Path string) {
 	if err := readFileInto(Path); err != nil {
 		panic(err)
 	}
-
 }
 
 func readFileInto(path string) error {

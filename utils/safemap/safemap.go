@@ -48,11 +48,17 @@ func (m *BeeMap) Get(k interface{}) interface{} {
 
 // Set Maps the given key and value. Returns false
 // if the key is already in the map and changes nothing.
-func (m *BeeMap) Set(k interface{}, v interface{}) {
+func (m *BeeMap) Set(k interface{}, v interface{}) bool {
 	m.lock.Lock()
-	//defer m.lock.Unlock()
-	m.bm[k] = v
-	m.lock.Unlock()
+	defer m.lock.Unlock()
+	if val, ok := m.bm[k]; !ok {
+		m.bm[k] = v
+	} else if val != v {
+		m.bm[k] = v
+	} else {
+		return false
+	}
+	return true
 }
 
 // Check Returns true if k is exist in the map.
