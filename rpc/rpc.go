@@ -1,33 +1,93 @@
 package rpc
 
 import (
-	"reflect"
 	"github.com/dming/lodos/rpc/pb"
-	"github.com/streadway/amqp"
+	"github.com/dming/lodos/conf"
 )
 
-type CallInfo struct {
+/*
+type CallInfo_old struct {
 	Id      string        // function name
 	Args    []interface{} // arguments
 	ChanRet chan *RetInfo // channel for return information
 	ReplyTo string // mq name for return information
 	Flag string // flag the info
 }
-
-type RetInfo struct {
+type RetInfo_old struct {
 	Ret []interface{} // the return result
 	Err error
 	ReplyTo string
 	Flag string // flag the info
 }
+*/
+
+type CallInfo struct {
+	RpcInfo rpcpb.RPCInfo
+	Result rpcpb.ResultInfo
+	Props map[string]interface{}
+	Agent MQServer
+}
 
 type FuncInfo struct {
-	Fn reflect.Value
-	IsGo bool
+	//Fn reflect.Value
+	Function interface{}
+	Goroutine bool
 }
 
 // interfaces
 
+type MQServer interface {
+	Callback(callInfo CallInfo) (err error)
+}
+
+type RPCServer interface {
+	NewRabbitmqRpcServer(info *conf.Rabbitmq) (err error)
+	NewRedisRpcServer(info *conf.Redis) (err error)
+	SetListener(listener RPCListener)
+	SetGoroutineControl(control GoroutineControl)
+	GetExecuting() int64
+	GetLocalRpcServer() LocalServer
+	Register(id string, fn interface{})
+	RegisterGo(id string, fn interface{})
+	Done() (err error)
+}
+
+type RPCClient interface {
+	NewRabbitmqRpcClient(info *conf.Rabbitmq) (err error)
+	NewRedisRpcClient(info *conf.Redis) (err error)
+	NewLocalRpcClient(server RPCServer) (err error)
+	Done () (err error)
+	Call(_func string, params ...interface{}) (interface{}, string)
+	CallNR(_func string, params ...interface{}) (err error)
+	CallArgs(_func string, ArgsType []string, Args [][]byte) (interface{}, string)
+	CallArgsNR(_func string, ArgsType []string, Args [][]byte) (err error)
+}
+
+type LocalServer interface {
+	IsClose() bool
+	Write(callInfo CallInfo) (err error)
+	StopConsume() (err error)
+	Shutdown() (err error)
+	Callback(callInfo CallInfo) (err error)
+}
+
+type LocalClient interface {
+	Done() (err error)
+	Call(callInfo CallInfo, callback chan rpcpb.ResultInfo) (err error)
+	CallNR(callInfo CallInfo) (err error)
+}
+
+type RPCListener interface {
+	//need to be complete
+}
+
+type GoroutineControl interface {
+	Wait() (err error)
+	Finish()
+}
+
+
+/*
 type Client interface {
 	AttachChanCall(chanCall chan *CallInfo)
 	AttachMqClient(mqClient MqClient)
@@ -61,5 +121,5 @@ type MqServer interface {
 	MarshalRetInfo(ri *RetInfo) ([]byte, error)
 	UnmarshalMqCallInfo(data []byte) (*rpcpb.MqCallInfo, error)
 }
-
+*/
 

@@ -14,7 +14,7 @@
 package gate
 
 import (
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/utils/safemap"
 	"fmt"
 	"reflect"

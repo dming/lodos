@@ -19,7 +19,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"io"
 )
 

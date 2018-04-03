@@ -3,7 +3,7 @@ package baserpc
 import (
 	"fmt"
 	"github.com/dming/lodos/conf"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/streadway/amqp"
 )
 

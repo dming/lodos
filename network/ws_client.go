@@ -15,7 +15,7 @@ package network
 
 import (
 	"github.com/gorilla/websocket"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"sync"
 	"time"
 )

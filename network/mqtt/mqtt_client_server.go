@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dming/lodos/conf"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/network"
 	"math"
 	"sync"

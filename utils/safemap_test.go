@@ -1,4 +1,4 @@
-// Copyright 2014 mqantserver Author. All Rights Reserved.
+// Copyright 2014 beego Author. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,34 +11,28 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package utils
 
 import (
-	"github.com/dming/lodos/conf"
-	"runtime"
-	log "github.com/dming/lodos/log"
+	"testing"
 )
 
-var pendingGo int
-func Go(f func()) {
-	pendingGo++
-	go func() {
-		defer func() {
-			pendingGo--
-			if r := recover(); r != nil {
-				if conf.LenStackBuf > 0 {
-					buf := make([]byte, conf.LenStackBuf)
-					l := runtime.Stack(buf, false)
-					log.Error("%v: %s", r, buf[:l])
-				} else {
-					log.Error("%v", r)
-				}
-			}
-		}()
+func Test_beemap(t *testing.T) {
+	bm := NewBeeMap()
+	if !bm.Set("astaxie", 1) {
+		t.Error("set Error")
+	}
+	if !bm.Check("astaxie") {
+		t.Error("check err")
+	}
 
-		f()
-	}()
-}
-func Idle() bool {
-	return pendingGo == 0
+	if v := bm.Get("astaxie"); v.(int) != 1 {
+		t.Error("get err")
+	}
+
+	bm.Delete("astaxie")
+	if bm.Check("astaxie") {
+		t.Error("delete err")
+	}
 }

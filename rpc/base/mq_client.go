@@ -9,7 +9,7 @@ import (
 	"github.com/dming/lodos/rpc/pb"
 	"github.com/dming/lodos/rpc"
 	"github.com/dming/lodos/module"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/rpc/utils"
 	"time"
 )
@@ -25,12 +25,12 @@ type mqClient struct {
 
 	ticker *time.Ticker
 }
-
+/*
 type ClientCallInfo struct {
 	flag string
 	timeout int64 //超时 timeout := time.Now().UnixNano() + ci.expired * 1000000
 	chanRet chan *rpc.RetInfo
-}
+}*/
 
 func NewMqClient(app module.AppInterface, info *conf.Rabbitmq) (client *mqClient, err error) {
 	// Init consumer first

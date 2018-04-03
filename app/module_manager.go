@@ -5,7 +5,7 @@ import (
 	"github.com/dming/lodos/module/base"
 	"github.com/dming/lodos/conf"
 	"fmt"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 )
 
 func NewModuleManager() module.ModuleManager {

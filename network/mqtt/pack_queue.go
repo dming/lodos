@@ -18,7 +18,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/dming/lodos/conf"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/network"
 	"time"
 )

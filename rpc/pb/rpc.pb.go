@@ -28,6 +28,134 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+
+type RPCInfo struct {
+	Cid      string   `protobuf:"bytes,1,opt,name=Cid" json:"Cid,omitempty"`
+	Fn       string   `protobuf:"bytes,2,opt,name=Fn" json:"Fn,omitempty"`
+	ReplyTo  string   `protobuf:"bytes,3,opt,name=ReplyTo" json:"ReplyTo,omitempty"`
+	Track    string   `protobuf:"bytes,4,opt,name=track" json:"track,omitempty"`
+	Expired  int64    `protobuf:"varint,5,opt,name=Expired" json:"Expired,omitempty"`
+	Reply    bool     `protobuf:"varint,6,opt,name=Reply" json:"Reply,omitempty"`
+	ArgsType []string `protobuf:"bytes,7,rep,name=ArgsType" json:"ArgsType,omitempty"`
+	Args     [][]byte `protobuf:"bytes,8,rep,name=Args,proto3" json:"Args,omitempty"`
+}
+
+func (m *RPCInfo) Reset()                    { *m = RPCInfo{} }
+func (m *RPCInfo) String() string            { return proto.CompactTextString(m) }
+func (*RPCInfo) ProtoMessage()               {}
+func (*RPCInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *RPCInfo) GetCid() string {
+	if m != nil {
+		return m.Cid
+	}
+	return ""
+}
+
+func (m *RPCInfo) GetFn() string {
+	if m != nil {
+		return m.Fn
+	}
+	return ""
+}
+
+func (m *RPCInfo) GetReplyTo() string {
+	if m != nil {
+		return m.ReplyTo
+	}
+	return ""
+}
+
+func (m *RPCInfo) GetTrack() string {
+	if m != nil {
+		return m.Track
+	}
+	return ""
+}
+
+func (m *RPCInfo) GetExpired() int64 {
+	if m != nil {
+		return m.Expired
+	}
+	return 0
+}
+
+func (m *RPCInfo) GetReply() bool {
+	if m != nil {
+		return m.Reply
+	}
+	return false
+}
+
+func (m *RPCInfo) GetArgsType() []string {
+	if m != nil {
+		return m.ArgsType
+	}
+	return nil
+}
+
+func (m *RPCInfo) GetArgs() [][]byte {
+	if m != nil {
+		return m.Args
+	}
+	return nil
+}
+
+type ResultInfo struct {
+	Cid        string `protobuf:"bytes,1,opt,name=Cid" json:"Cid,omitempty"`
+	Error      string `protobuf:"bytes,2,opt,name=Error" json:"Error,omitempty"`
+	ResultsType []string `protobuf:"bytes,4,rep,name=ResultType" json:"ResultType,omitempty"`
+	Results     [][]byte `protobuf:"bytes,5,rep,name=Result,proto3" json:"Result,omitempty"`
+}
+
+func NewResultInfo(Cid string, Error string, ArgsType []string, Args [][]byte) *ResultInfo {
+	resultInfo := &ResultInfo{
+		Cid:        *proto.String(Cid),
+		Error:      *proto.String(Error),
+		ResultsType: ArgsType,
+		Results:     Args,
+	}
+	return resultInfo
+}
+func (m *ResultInfo) Reset()                    { *m = ResultInfo{} }
+func (m *ResultInfo) String() string            { return proto.CompactTextString(m) }
+func (*ResultInfo) ProtoMessage()               {}
+func (*ResultInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *ResultInfo) GetCid() string {
+	if m != nil {
+		return m.Cid
+	}
+	return ""
+}
+
+func (m *ResultInfo) GetError() string {
+	if m != nil {
+		return m.Error
+	}
+	return ""
+}
+
+func (m *ResultInfo) GetResultsType() []string {
+	if m != nil {
+		return m.ResultsType
+	}
+	return nil
+}
+
+func (m *ResultInfo) GetResults() [][]byte {
+	if m != nil {
+		return m.Results
+	}
+	return nil
+}
+
+func init() {
+	proto.RegisterType((*RPCInfo)(nil), "rpcpb.RPCInfo")
+	proto.RegisterType((*ResultInfo)(nil), "rpcpb.ResultInfo")
+}
+
+/*
 type MqCallInfo struct {
 	Id	string			`protobuf:"bytes,1,opt,name=Id" json:"id,omitempty"`
 	ReplyTo	string			`protobuf:"bytes,2,opt,name=ReplyTo" json:"replyTo,omitempty"`
@@ -75,7 +203,8 @@ func (c *MqCallInfo) GetFlag() string {
 	}
 	return ""
 }
-
+*/
+/*
 type MqRetInfo struct {
 	Flag    	string 		`protobuf:"bytes,1,opt,name=Flag" json:"Flag,omitempty"`
 	Error		string 		`protobuf:"bytes,2,opt,name=Error" json:"Error,omitempty"`
@@ -137,7 +266,7 @@ func (m *MqRetInfo) GetReplyTo() string {
 	}
 	return ""
 }
-
+*/
 
 func init() { proto.RegisterFile("rpc/rpc.proto", fileDescriptor0) }
 

@@ -16,7 +16,7 @@ package network
 import (
 	"crypto/tls"
 	"github.com/gorilla/websocket"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"net"
 	"net/http"
 	"sync"

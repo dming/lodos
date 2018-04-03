@@ -16,3 +16,21 @@ message RetInfo {
     repeated bytes Rets = 4;
     string ReplyTo = 5;
 }
+
+message RPCInfo {
+    string Cid = 1;
+    string Fn = 2;
+    string ReplyTo = 3;
+    string track = 4;
+    int64 Expired = 5;
+    bool Reply = 6;
+    repeated string ArgsType = 7;
+    repeated bytes Args = 8;
+}
+
+message ResultInfo {
+    string Cid = 1;
+    string Error = 2;
+    repeated string ResultsType = 4;
+    repeated bytes Results = 5;
+}

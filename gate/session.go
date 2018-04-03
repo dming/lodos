@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/dming/lodos/module"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"sync"
 	"reflect"
 )

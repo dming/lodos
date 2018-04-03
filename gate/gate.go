@@ -8,7 +8,7 @@ import (
 	"github.com/dming/lodos/module"
 	"fmt"
 	"reflect"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/module/base"
 )
 

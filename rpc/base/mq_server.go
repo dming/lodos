@@ -9,7 +9,7 @@ import (
 	"github.com/dming/lodos/rpc"
 	"reflect"
 	"github.com/dming/lodos/module"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/rpc/utils"
 )
 

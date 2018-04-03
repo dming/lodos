@@ -5,7 +5,7 @@ import (
 	module "github.com/dming/lodos/module"
 	"github.com/dming/lodos/conf"
 	"runtime"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 )
 
 type BaseModule struct {

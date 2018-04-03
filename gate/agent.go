@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/dming/lodos/conf"
 	"github.com/dming/lodos/network/mqtt"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/network"
 	"github.com/dming/lodos/utils/uuid"
 	"runtime"

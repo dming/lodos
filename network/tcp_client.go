@@ -14,7 +14,7 @@
 package network
 
 import (
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"net"
 	"sync"
 	"time"

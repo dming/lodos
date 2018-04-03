@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"flag"
-	log "github.com/dming/lodos/mlog"
+	log "github.com/dming/lodos/log"
 	"os/signal"
 	"strings"
 	"math"

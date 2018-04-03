@@ -12,8 +12,12 @@ type Module interface {
 	OnInit(app AppInterface, settings conf.ModuleSettings)
 	OnDestroy()
 	Run(closeSig chan bool)
+	//include skeleton
+	//Skeleton
 }
 
+//Module 应该包含skeleton，
+//设立Skelton是为了在server的Module里直接继承struct Skeleton，方便开发
 type Skeleton interface {
 	Init(app AppInterface, settings conf.ModuleSettings)
 	GetApp() AppInterface

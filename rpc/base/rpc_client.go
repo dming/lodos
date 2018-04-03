@@ -1,12 +1,17 @@
 package baserpc
 
 import (
-	"strconv"
-	"time"
-	"fmt"
-	"github.com/dming/lodos/rpc"
-	log "github.com/dming/lodos/mlog"
+	"github.com/dming/lodos/rpc/pb"
 )
+
+type ClientCallInfo struct {
+	correlation_id string
+	timeout        int64 //超时
+	call_chan           chan rpcpb.ResultInfo
+}
+
+
+/*
 
 // client should only know about the channel connected to server, \
 // but dont know who is the server
@@ -151,3 +156,4 @@ func (c *client) Close() error {
 	}
 	return nil
 }
+*/
