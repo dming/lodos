@@ -9,6 +9,11 @@ import (
 	"fmt"
 	"time"
 	"reflect"
+	"github.com/opentracing/opentracing-go"
+	"github.com/dming/lodos/gate"
+	"github.com/dming/lodos/rpc/utils"
+	"github.com/dming/lodos/rpc/pb"
+	"runtime"
 )
 
 type RPCServer struct {
@@ -43,10 +48,17 @@ func NewRPCServer(app module.AppInterface, module module.Module) (rpc.RPCServer,
 	server.mq_chan_done = make(chan error)
 	server.callback_chan_done = make(chan error)
 	//server.ch = make(chan int, app.GetSettings().Rpc.MaxCoroutine) //need to be complete
-	//server.SetGoroutineControl(rpc_server)
+	server.SetGoroutineControl(server)
 
 	//create local rpc service
-	//local_server, err = NewLocalServer(server.mq_chan)
+	local_server, err := NewLocalServer(server.mq_chan)
+	if err != nil {
+		log.Error("LocalServer Dial : %s", err)
+	}
+	server.localServer = local_server
+
+	go server.on_call_handle(server.mq_chan, server.callback_chan, server.mq_chan_done)
+	go server.on_callback_handle(server.callback_chan, server.callback_chan_done)
 
 	return server, nil
 }
@@ -88,7 +100,7 @@ func (s *RPCServer) SetGoroutineControl(control rpc.GoroutineControl) {
 	s.control = control
 }
 
-func (s *RPCServer) GetLoaclServer() rpc.LocalServer {
+func (s *RPCServer) GetLocalRpcServer() rpc.LocalServer {
 	return s.localServer
 }
 
@@ -210,13 +222,39 @@ ForEnd:
 }
 
 func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.CallInfo) {
-	//error and defer
 
+	_errorCallback := func(Cid string, Error string, span opentracing.Span, traceid string) {
+		//异常日志都应该打印
+		log.Error("[%s] %s rpc func(%s) error:\n%s", traceid, s.module.GetType(), callInfo.RpcInfo.Fn, Error)
+		resultInfo := rpcpb.NewResultInfo(Cid, Error, nil, nil)
+		callInfo.Result = *resultInfo
+		callback_chan <- callInfo
+		if span != nil {
+			span.LogEventWithPayload("Error", Error)
+		}
+		if s.listener != nil {
+			//s.listener.OnError(callInfo.RpcInfo.Fn, &callInfo, fmt.Errorf(Error))
+		}
+	}
+	// defer
+	defer func() {
+		if r := recover(); r != nil {
+			var rn = ""
+			switch r.(type) {
+
+			case string:
+				rn = r.(string)
+			case error:
+				rn = r.(error).Error()
+			}
+			log.Error("recover", rn)
+			_errorCallback(callInfo.RpcInfo.Cid, rn, nil, "")
+		}
+	}()
 
 	functionInfo, ok := s.functions[callInfo.RpcInfo.Fn]
 	if !ok {
-		//
-		err
+		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn), nil, "")
 		return
 	}
 	_func := functionInfo.Function
@@ -224,18 +262,173 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 	argsType := callInfo.RpcInfo.ArgsType
 	f := reflect.ValueOf(_func)
 	if len(args) != f.Type().NumIn() {
-		err
+		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("The number of args %s is not adapted.%s", args, f.String()), nil, "")
 		return
 	}
 
 	_runFunc := func() {
 		s.wg.Add(1)
 		s.executing++
-		var span opentracing
+		var span opentracing.Span = nil
+		var tradeId string = ""
+		defer func() {
+			if r := recover(); r != nil {
+				var rn = ""
+				switch r.(type) {
+
+				case string:
+					rn = r.(string)
+				case error:
+					rn = r.(error).Error()
+				}
+				buf := make([]byte, 1024)
+				l := runtime.Stack(buf, false)
+				errstr := string(buf[:l])
+				allError := fmt.Sprintf("%s rpc func(%s) error %s\n ----Stack----\n%s", s.module.GetType(), callInfo.RpcInfo.Fn, rn, errstr)
+				log.Error(allError)
+				_errorCallback(callInfo.RpcInfo.Cid, allError, span, tradeId)
+			}
+
+			if span != nil {
+				span.Finish()
+			}
+			s.wg.Add(-1)
+			s.executing--
+			if s.control != nil {
+				s.control.Finish()
+			}
+		}()
+
+		//exec_time := time.Now().UnixNano()
+
+		//var session gate.Session = nil
+		var in []reflect.Value
+
+		if len(argsType) > 0 {
+			in = make([]reflect.Value, len(args))
+			for k, v := range argsType {
+				v, err := argsutil.Bytes2Args(s.app, v, args[k])
+				if err != nil {
+					_errorCallback(callInfo.RpcInfo.Cid, err.Error(), span, tradeId)
+					return
+				}
+				//switch v2 := v.(type) {
+				switch v.(type) {
+				case gate.Session:
+					//try to load Span
+					//span = v2.LoadSpan(fmt.Sprintf("%s/%s", s.module.GetType(), callInfo.RpcInfo.Fn))
+					/*if span != nil {
+						span.SetTag("UserId", v2.GetUserid())
+						span.SetTag("Func", callInfo.RpcInfo.Fn)
+					}
+					session = v2
+					traceid = session.TracId()*/
+					in[k] = reflect.ValueOf(v)
+				case nil:
+					in[k] = reflect.Zero(f.Type().In(k))//设定为f的第k个参数的零值
+				default:
+					in[k] = reflect.ValueOf(v)
+				}
+			}
+		} //init in here
+
+		if s.listener != nil {
+			/*
+			errs := s.listener.BeforeHandle(callInfo.RpcInfo.Fn, session, &callInfo)
+			if errs != nil {
+				_errorCallback(callInfo.RpcInfo.Cid, errs.Error(), span, traceid)
+				return
+			}*/
+		}
+
+		out := f.Call(in)
+		var rs []interface{}
+
+		if len(out) < 1 {
+			_errorCallback(callInfo.RpcInfo.Cid, "the number of result output is less than 1.", span, tradeId)
+			return
+		}
+		if len(out) > 0 {
+			rs = make([]interface{}, len(out))
+			for i, v := range out {
+				rs[i] = v.Interface()
+			}
+		}
+		var argsType = make([]string, len(out)-1)
+		var args =  make([][]byte, len(out)-1)
+		//argsType, args, err := argsutil.ArgsTypeAnd2Bytes(s.app, rs[0])
+		for i := 0; i < len(out) - 1; i++ {
+			var err error = nil
+			argsType[i], args[i], err = argsutil.ArgsTypeAnd2Bytes(s.app, rs[i])
+			if err != nil {
+				_errorCallback(callInfo.RpcInfo.Cid, err.Error(), span, tradeId)
+				return
+			}
+		}
+		/*
+		// 错误信息应该是string或者error格式的
+		var errStr string = ""
+		switch rs[len(out) - 1].(type) {
+		case types.Nil:
+			errStr = ""
+		case string :
+			errStr = rs[len(out) - 1].(string);
+		case error :
+			errStr = rs[len(out) - 1].(error).Error()
+		default:
+			_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("the error.(type) is not as string neither error"), span, tradeId)
+			return
+		}*/
+		resultInfo := rpcpb.NewResultInfo(
+			callInfo.RpcInfo.Cid,
+			rs[len(out) - 1].(string),
+			argsType,
+			args,
+		)
+		callInfo.Result = *resultInfo
+		callback_chan <- callInfo
+		/*if span != nil {
+			span.LogEventWithPayload("Result.Type", argsType)
+			span.LogEventWithPayload("Result", string(args))
+		}
+		if s.app.GetSettings().Rpc.LogSuccess {
+			log.Info("[%s] %s rpc func(%s) exec_time(%s) success", traceid, s.module.GetType(), callInfo.RpcInfo.Fn, s.timeConversion(time.Now().UnixNano()-exec_time))
+		}
+		if s.listener != nil {
+			s.listener.OnComplete(callInfo.RpcInfo.Fn, &callInfo, resultInfo, time.Now().UnixNano()-exec_time)
+		}*/
 	}
 
+	if s.control != nil {
+		//协程数量达到最大限制
+		s.control.Wait()
+	}
+
+	if functionInfo.Goroutine {
+		go _runFunc()
+	} else {
+		_runFunc()
+	}
 }
 
+//时间转换
+func (s *RPCServer) timeConversion(ns int64) string {
+	if (ns / 1000) < 1 {
+		return fmt.Sprintf("%d ns", (ns))
+	} else if 1 < (ns/int64(1000)) && (ns/int64(1000)) < 1000 {
+		return fmt.Sprintf("%.2f μs", float32(ns/int64(1000)))
+	} else if 1 < (ns/int64(1000*1000)) && (ns/int64(1000*1000)) < 1000 {
+		return fmt.Sprintf("%.2f ms", float32(ns/int64(1000*1000)))
+	} else if 1 < (ns/int64(1000*1000*1000)) && (ns/int64(1000*1000*1000)) < 1000 {
+		return fmt.Sprintf("%.2f s", float32(ns/int64(1000*1000*1000)))
+	} else if 1 < (ns/int64(1000*1000*1000*60)) && (ns/int64(1000*1000*1000*60)) < 1000 {
+		return fmt.Sprintf("%.2f m", float32(ns/int64(1000*1000*1000*60)))
+	} else if 1 < (ns/int64(1000*1000*1000*60*60)) && (ns/int64(1000*1000*1000*60*60)) < 1000 {
+		return fmt.Sprintf("%.2f m", float32(ns/int64(1000*1000*1000*60*60)))
+	} else {
+		return fmt.Sprintf("%d ns", (ns))
+	}
+}
 
 
 
