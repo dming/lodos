@@ -13,7 +13,7 @@ type Module interface {
 	OnDestroy()
 	Run(closeSig chan bool)
 	//include skeleton
-	//Skeleton
+	Skeleton
 }
 
 //Module 应该包含skeleton，
@@ -36,6 +36,7 @@ type AppInterface interface {
 	Call(moduleType string, hash string, fnId string, args ...interface{}) (*rpc.RetInfo,  error)
 	ConfigSettings(settings conf.Config)
 	Destroy() error
+	GetSettings() conf.Config
 	GetModuleSession (filter string, hash string) (ModuleSession, error)
 	GetRoute (moduleType string) (func(app AppInterface, moduleType string, hash string) (ModuleSession, error), error)
 	GetRPCSerialize() (map[string]RPCSerialize)

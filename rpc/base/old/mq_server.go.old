@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"github.com/dming/lodos/module"
 	log "github.com/dming/lodos/log"
-	"github.com/dming/lodos/rpc/utils"
+	"github.com/dming/lodos/rpc/argsutil"
 )
 
 type mqServer struct {

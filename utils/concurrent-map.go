@@ -312,7 +312,7 @@ func fnv32(key string) uint32 {
 	return hash
 }
 
-// Concurrent map uses Interface{} as its value, therefor JSON Unmarshal
+// Concurrent map uses Interface{} as its value, therefor JSON UnmarshalRPCInfo
 // will probably won't know which to type to unmarshal into, in such case
 // we'll end up with a value of type map[string]interface{}, In most cases this isn't
 // out value type, this is why we've decided to remove this functionality.
@@ -322,8 +322,8 @@ func fnv32(key string) uint32 {
 
 // 	tmp := make(map[string]interface{})
 
-// 	// Unmarshal into a single map.
-// 	if err := json.Unmarshal(b, &tmp); err != nil {
+// 	// UnmarshalRPCInfo into a single map.
+// 	if err := json.UnmarshalRPCInfo(b, &tmp); err != nil {
 // 		return nil
 // 	}
 

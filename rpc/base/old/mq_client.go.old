@@ -10,7 +10,6 @@ import (
 	"github.com/dming/lodos/rpc"
 	"github.com/dming/lodos/module"
 	log "github.com/dming/lodos/log"
-	"github.com/dming/lodos/rpc/utils"
 	"time"
 )
 
@@ -81,7 +80,7 @@ func NewMqClient(app module.AppInterface, info *conf.Rabbitmq) (client *mqClient
 func (c *mqClient) Done() (err error) {
 	//关闭amqp链接通道
 	err = c.Consumer.Shutdown()
-	//清理 callinfos 列表
+	//清理 callInfos 列表
 	for key, clinetCallInfo := range c.callInfos {
 		if clinetCallInfo != nil {
 			//关闭管道
@@ -100,7 +99,7 @@ func (c *mqClient) Done() (err error) {
 func (c *mqClient) Call(ci *rpc.CallInfo) error {
 	var err error
 	if c.callInfos == nil {
-		return fmt.Errorf("MqClient is closed")
+		return fmt.Errorf("MqClient is isClose")
 	}
 	ci.ReplyTo = c.Consumer.callback_queue
 	body, err := c.Marshal(ci)
@@ -248,7 +247,7 @@ func (c *mqClient) UnmarshalMqCallInfo(data []byte) (*rpcpb.MqCallInfo, error) {
 	//fmt.Println(msg)
 	//保存解码后的数据，Value可以为任意数据类型
 	var mqCallInfo rpcpb.MqCallInfo
-	err := proto.Unmarshal(data, &mqCallInfo)
+	err := proto.UnmarshalRPCInfo(data, &mqCallInfo)
 	if err != nil {
 		return nil, err
 	} else {

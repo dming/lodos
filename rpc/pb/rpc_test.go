@@ -32,7 +32,7 @@ func TestRPCInfo(t *testing.T) {
 		t.Fatalf("marshaling error: ", err)
 	}    // 进行解码
 	newRPC := &RPCInfo{}
-	err = proto.Unmarshal(data, newRPC)
+	err = proto.UnmarshalRPCInfo(data, newRPC)
 	if err != nil {
 		t.Fatalf("unmarshaling error: ", err)
 	}    // 测试结果
@@ -53,7 +53,7 @@ func TestResultInfo(t *testing.T) {
 		t.Fatalf("marshaling error: ", err)
 	}    // 进行解码
 	newResult := &ResultInfo{}
-	err = proto.Unmarshal(data, newResult)
+	err = proto.UnmarshalRPCInfo(data, newResult)
 	if err != nil {
 		t.Fatalf("unmarshaling error: ", err)
 	}    // 测试结果

@@ -67,7 +67,7 @@ func (a *app) OnInit(settings conf.Config) error {
 				continue
 			}
 			a.serverList[module.Id] = session
-			log.Info("RPCClient create success type(%s) id(%s)", Type, module.Id)
+			log.Info("rpcClient create success type(%s) id(%s)", Type, module.Id)
 		}
 	}
 	return nil
@@ -126,10 +126,10 @@ func (a *app) Destroy() error {
 	for id, session := range a.serverList {
 		err := session.GetClient().Close()
 		if err != nil {
-			//log.Warning("RPCClient close fail type(%s) id(%s)", session.GetType(), id)
-			fmt.Printf("RPCClient close fail type(%s) id(%s)", session.GetType(), id)
+			//log.Warning("rpcClient close fail type(%s) id(%s)", session.GetType(), id)
+			fmt.Printf("rpcClient close fail type(%s) id(%s)", session.GetType(), id)
 		} else {
-			//log.Info("RPCClient close success type(%s) id(%s)", session.GetType(), id)
+			//log.Info("rpcClient close success type(%s) id(%s)", session.GetType(), id)
 		}
 	}
 	return nil
@@ -224,4 +224,8 @@ func (a *app) AsynCall(moduleType string, hash string, fnId string, args ...inte
 		return nil, err
 	}
 	return ms.GetClient().AsynCall(fnId, args...)
+}
+
+func (a *app) GetSettings() conf.Config {
+	return a.settings
 }

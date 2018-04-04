@@ -57,9 +57,11 @@ type RPCClient interface {
 	NewRedisRpcClient(info *conf.Redis) (err error)
 	NewLocalRpcClient(server RPCServer) (err error)
 	Done () (err error)
-	Call(_func string, params ...interface{}) (interface{}, string)
+	Call(_func string, params ...interface{}) ([]interface{}, error)
+	SyncCall(_func string, params ...interface{}) (chan rpcpb.ResultInfo, error)
 	CallNR(_func string, params ...interface{}) (err error)
-	CallArgs(_func string, ArgsType []string, Args [][]byte) (interface{}, string)
+	CallArgs(_func string, ArgsType []string, Args [][]byte) ([]interface{}, error)
+	SyncCallArgs(_func string, ArgsType []string, Args [][]byte) (chan rpcpb.ResultInfo, error)
 	CallArgsNR(_func string, ArgsType []string, Args [][]byte) (err error)
 }
 

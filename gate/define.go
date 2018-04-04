@@ -51,6 +51,7 @@ type Session interface {
 	Send(topic string, body []byte) (error)
 	SendNR(topic string, body []byte) (error)
 	Close() (error)
+	Clone() Session
 }
 
 /**

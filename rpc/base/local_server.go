@@ -32,7 +32,7 @@ func (s *localServer) IsClose() bool {
 
 func (s *localServer) Write(callInfo rpc.CallInfo) error {
 	if s.isClose {
-		return fmt.Errorf("LocalServer is closed.")
+		return fmt.Errorf("LocalServer is isClose.")
 	}
 	s.local_chan <- callInfo
 	return nil
