@@ -21,14 +21,14 @@ type Skeleton struct {
 	rwmutex *sync.RWMutex
 }
 
-func (s *Skeleton) Init(app module.AppInterface, settings conf.ModuleSettings)  {
+func (s *Skeleton) Init(app module.AppInterface, module module.Module, settings conf.ModuleSettings)  {
 	s.App = app
 	s.settings = settings
 	s.hash = settings.Id
-	s.server = NewRpcServerModule(app, settings)
+	s.server = NewRpcServerModule(app, module, settings)
 }
 
-func (s *Skeleton) Destroy()  {
+func (s *Skeleton) Destroy() {
 	s.GetServer().OnDestroy()
 }
 

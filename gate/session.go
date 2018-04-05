@@ -179,7 +179,7 @@ func (session *session) Update() (error) {
 	}()
 
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
@@ -212,7 +212,7 @@ func (session *session) Bind(Userid string) (error) {
 	}()
 
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
@@ -245,7 +245,7 @@ func (session *session) UnBind() (error) {
 	}()
 
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 	server, err := session.app.GetServerById(session.sessionpb.GetServerid())
 	if err != nil {
@@ -269,7 +269,7 @@ func (session *session) UnBind() (error) {
 
 func (session *session) PushSettings() (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	server, err := session.app.GetServerById(session.sessionpb.Serverid)
@@ -294,7 +294,7 @@ func (session *session) PushSettings() (error) {
 
 func (session *session) Set(key string, value string) (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	if session.sessionpb.Settings == nil {
@@ -330,7 +330,7 @@ func (session *session) Get(key string) (result string) {
 
 func (session *session) Remove(key string) (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	if session.sessionpb.Settings == nil {
@@ -356,7 +356,7 @@ func (session *session) Remove(key string) (error) {
 
 func (session *session) Send(topic string, body []byte) (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 	server, e := session.app.GetServerById(session.sessionpb.Serverid)
 	if e != nil {
@@ -369,7 +369,7 @@ func (session *session) Send(topic string, body []byte) (error) {
 
 func (session *session) SendNR(topic string, body []byte) (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	server, err := session.app.GetServerById(session.sessionpb.Serverid)
@@ -383,7 +383,7 @@ func (session *session) SendNR(topic string, body []byte) (error) {
 
 func (session *session) Close() (error) {
 	if session.app == nil {
-		return fmt.Errorf("Module.App is nil")
+		return fmt.Errorf("Module.app is nil")
 	}
 
 	server, err := session.app.GetServerById(session.sessionpb.Serverid)

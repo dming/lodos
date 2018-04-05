@@ -8,34 +8,38 @@ import (
 	log "github.com/dming/lodos/log"
 )
 
-func NewRpcServerModule(app module.AppInterface, settings conf.ModuleSettings) module.RpcServerModule {
+func NewRpcServerModule(app module.AppInterface, module module.Module, settings conf.ModuleSettings) module.RpcServerModule {
 	rs := new(rpcServerModule)
-	rs.OnInit(app, settings)
+	rs.OnInit(app, module, settings)
 	return  rs
 }
 
 type rpcServerModule struct {
 	App module.AppInterface
-	server rpc.Server
+	server rpc.RPCServer
 	settings conf.ModuleSettings
 }
 
-func (rs *rpcServerModule) OnInit (app module.AppInterface, settings conf.ModuleSettings)  {
+func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module, settings conf.ModuleSettings)  {
 	rs.settings = settings
-	server := baserpc.NewServer() //默认会创建一个本地的RPC
+	//server := baserpc.NewServer() //默认会创建一个本地的RPC
+	server, err := baserpc.NewRPCServer(app, module)
+	if err != nil {
+		log.Error("fail in dialing rpc server : %s", err)
+	}
 	if settings.RabbitmqInfo != nil {
 		//存在远程rpc的配置
-		mqServer, err := baserpc.NewMqServer(rs.App, settings.RabbitmqInfo, server.GetChanCall())
-		if err != nil {
-			log.Error("create mq server fail !!")
-			panic("create mq server fail !!")
-		}
-		server.AttachMqServer(mqServer)
+		server.NewRabbitmqRpcServer(settings.RabbitmqInfo)
+	}
+	if settings.RedisInfo != nil {
+		//存在远程redis rpc的配置
+		server.NewRedisRpcServer(settings.RedisInfo)
 	}
 
 	rs.server = server
 	//向App注册该RpcServerModule
-	err := app.AttachChanCallToClient(settings.Id, rs.server.GetChanCall())
+	//err = app.AttachChanCallToClient(settings.id, rs.server.GetChanCall())
+	err = app.RegisterLocalClient(settings.Id, server)
 	if err != nil {
 		log.Warning("RegisterLocalClient: id(%s) error(%s)", settings.Id, err)
 	}
@@ -44,11 +48,11 @@ func (rs *rpcServerModule) OnInit (app module.AppInterface, settings conf.Module
 
 func (rs *rpcServerModule) OnDestroy() {
 	if rs.server != nil {
-		err := rs.server.Close()
+		err := rs.server.Done()
 		if err != nil {
-			//log.Warning("RPCServer close fail id(%s) error(%s)", s.settings.Id, err)
+			log.Warning("RPCServer close fail id(%s) error(%s)", rs.settings.Id, err)
 		} else {
-			//log.Info("RPCServer close success id(%s)", s.settings.Id)
+			log.Info("RPCServer close success id(%s)", rs.settings.Id)
 		}
 		rs.server = nil
 	}
@@ -68,12 +72,11 @@ func (rs *rpcServerModule) RegisterGo(id string, f interface{}) {
 	rs.server.RegisterGo(id, f)
 }
 
-
 func (rs *rpcServerModule) GetId() string {
 	return rs.settings.Id
 }
 
 
-func (rs *rpcServerModule) GetRpcServer() rpc.Server {
+func (rs *rpcServerModule) GetRpcServer() rpc.RPCServer {
 	return rs.server
 }

@@ -15,8 +15,8 @@ func NewModuleManager() module.ModuleManager {
 
 type moduleManager struct {
 	app module.AppInterface
-	mods []*basemodule.BaseModule
-	runMods []*basemodule.BaseModule
+	mods []*basemodule.DefaultModule
+	runMods []*basemodule.DefaultModule
 }
 
 func (mg *moduleManager) Init(app module.AppInterface, processId string) {
@@ -52,7 +52,7 @@ func (mg *moduleManager) Init(app module.AppInterface, processId string) {
 
 
 func (mg *moduleManager) Register(mi module.Module) {
-	m := new(basemodule.BaseModule)
+	m := new(basemodule.DefaultModule)
 	m.Mi = mi
 	m.CloseSig = make(chan bool, 1)
 
@@ -60,7 +60,7 @@ func (mg *moduleManager) Register(mi module.Module) {
 }
 
 func (mg *moduleManager) RegisterRunMod(mi module.Module) {
-	m := new(basemodule.BaseModule)
+	m := new(basemodule.DefaultModule)
 	m.Mi = mi
 	m.CloseSig = make(chan bool, 1)
 
@@ -104,3 +104,26 @@ func (mg *moduleManager) Destroy() {
 	}
 }
 
+
+/*
+func (mg *moduleManager) ReportStatistics(args interface{}) {
+	if mg.app.GetSettings().Master.Enable {
+		for _, m := range mg.runMods {
+			mi := m.mi
+			switch value := mi.(type) {
+			case module.RPCModule:
+				//汇报统计
+				servers := mg.app.GetServersByType("Master")
+				if len(servers) == 1 {
+					b, _ := value.GetStatistical()
+					_, err := servers[0].Call("ReportForm", value.GetType(), m.settings.ProcessID, m.settings.Id, value.Version(), b, value.GetExecuting())
+					if err != "" {
+						log.Warning("Report To Master error :", err)
+					}
+				}
+			default:
+			}
+		}
+		//timer.SetTimer(3, mg.ReportStatistics, nil)
+	}
+}*/

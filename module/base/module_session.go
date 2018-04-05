@@ -2,69 +2,58 @@ package basemodule
 
 import (
 	"github.com/dming/lodos/rpc"
-	"fmt"
-	"github.com/dming/lodos/conf"
 	"github.com/dming/lodos/module"
-	"github.com/dming/lodos/rpc/base"
+	"github.com/dming/lodos/rpc/pb"
 )
 
 type moduleSession struct {
-	Id string
-	App module.AppInterface
-	Type string
-	rpcClient rpc.Client
+	id        string
+	app       module.AppInterface
+	mType     string
+	rpcClient rpc.RPCClient
 }
 
-func NewModuleSession(app module.AppInterface, id string, Type string, chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) (module.ModuleSession, error) {
-	m := new(moduleSession)
-	m.App = app
-	m.Id = id
-	m.Type = Type
-	err := m.CreateClient(chanCall, info)
-	return m, err
-}
-
-
-func (m *moduleSession) CreateClient(chanCall chan *rpc.CallInfo, info *conf.Rabbitmq) error {
-	var err error
-	m.rpcClient = baserpc.NewClient()
-	if err != nil {
-		fmt.Printf("error in moduleSession.CreateClient, %s", err.Error())
-		return err
+func NewModuleSession(app module.AppInterface, id string, Type string, client rpc.RPCClient) module.ModuleSession {
+	s := &moduleSession{
+		app: app,
+		id: id,
+		mType: Type,
+		rpcClient: client,
 	}
-	if chanCall != nil {
-		m.rpcClient.AttachChanCall(chanCall)
-	}
-	if info != nil {
-		mqClient, err := baserpc.NewMqClient(m.App, info)
-		if err != nil {
-			fmt.Printf("error in moduleSession.CreateClient, %s", err.Error())
-			return err
-		}
-		m.rpcClient.AttachMqClient(mqClient)
-	}
-	return err
+	return s
 }
 
-func (m *moduleSession) GetId () string {
-	return m.Id
+func (s *moduleSession) GetApp () module.AppInterface {
+	return s.app
 }
 
-
-func (m *moduleSession) GetType () string {
-	return m.Type
+func (s *moduleSession) GetId () string {
+	return s.id
 }
 
-func (m *moduleSession) GetClient () rpc.Client {
-	return m.rpcClient
+func (s *moduleSession) GetType () string {
+	return s.mType
 }
 
-
-func (m *moduleSession) Call (id string, timeout int, args ...interface{} ) (*rpc.RetInfo, error) {
-	return m.rpcClient.Call(id, timeout, args...)
+func (s *moduleSession) GetClient () rpc.RPCClient {
+	return s.rpcClient
 }
 
-func (m *moduleSession) AsynCall (id string, args ...interface{} ) (chan *rpc.RetInfo, error) {
-	return m.rpcClient.AsynCall(id, args...)
+func (s *moduleSession) Call(_func string, params ...interface{}) ([]interface{}, error) {
+	return s.rpcClient.Call(_func, params...)
 }
-
+func (s *moduleSession) SyncCall(_func string, params ...interface{}) (chan rpcpb.ResultInfo, error) {
+	return s.rpcClient.SyncCall(_func, params...)
+}
+func (s *moduleSession) CallNR(_func string, params ...interface{}) (err error) {
+	return s.rpcClient.CallNR(_func, params...)
+}
+func (s *moduleSession) CallArgs(_func string, ArgsType []string, Args [][]byte) ([]interface{}, error) {
+	return s.rpcClient.CallArgs(_func, ArgsType, Args)
+}
+func (s *moduleSession) SyncCallArgs(_func string, ArgsType []string, Args [][]byte) (chan rpcpb.ResultInfo, error) {
+	return s.rpcClient.SyncCallArgs(_func, ArgsType, Args)
+}
+func (s *moduleSession) CallArgsNR(_func string, ArgsType []string, Args [][]byte) (err error) {
+	return s.rpcClient.CallArgsNR(_func, ArgsType, Args)
+}
