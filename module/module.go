@@ -18,7 +18,7 @@ type Module interface {
 	GetType() string //模块类型
 	OnAppConfigurationLoaded(app AppInterface)
 	OnConfChanged(settings *conf.ModuleSettings)	//为以后动态服务发现做准备
-	OnInit(app AppInterface, settings conf.ModuleSettings)
+	OnInit(app AppInterface, settings *conf.ModuleSettings)
 	OnDestroy()
 	Run(closeSig chan bool)
 }
@@ -139,7 +139,7 @@ type ModuleSession interface {
 }
 
 type RpcServerModule interface {
-	OnInit (app AppInterface, module Module, settings conf.ModuleSettings)
+	OnInit (app AppInterface, module Module, settings *conf.ModuleSettings)
 	Register(id string, f interface{})
 	RegisterGo(id string, f interface{})
 	GetId() string

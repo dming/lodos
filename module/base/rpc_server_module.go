@@ -8,7 +8,7 @@ import (
 	log "github.com/dming/lodos/log"
 )
 
-func NewRpcServerModule(app module.AppInterface, module module.Module, settings conf.ModuleSettings) module.RpcServerModule {
+func NewRpcServerModule(app module.AppInterface, module module.Module, settings *conf.ModuleSettings) module.RpcServerModule {
 	rs := new(rpcServerModule)
 	rs.OnInit(app, module, settings)
 	return  rs
@@ -17,10 +17,10 @@ func NewRpcServerModule(app module.AppInterface, module module.Module, settings 
 type rpcServerModule struct {
 	App module.AppInterface
 	server rpc.RPCServer
-	settings conf.ModuleSettings
+	settings *conf.ModuleSettings
 }
 
-func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module, settings conf.ModuleSettings)  {
+func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module, settings *conf.ModuleSettings)  {
 	rs.settings = settings
 	//server := baserpc.NewServer() //默认会创建一个本地的RPC
 	server, err := baserpc.NewRPCServer(app, module)

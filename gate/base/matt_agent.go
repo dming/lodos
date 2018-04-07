@@ -1,45 +1,64 @@
 package basegate
 
 import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"github.com/dming/lodos/conf"
-	"github.com/dming/lodos/gate/mqtt"
-	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/network"
-	"github.com/dming/lodos/utils/uuid"
+	"bufio"
 	"runtime"
+	"github.com/dming/lodos/gate/base/mqtt"
+	"github.com/dming/lodos/conf"
+	"encoding/json"
 	"strings"
+	"github.com/dming/lodos/log"
+	"fmt"
 	"time"
+	"github.com/dming/lodos/utils/uuid"
+	"github.com/dming/lodos/gate"
+	"github.com/dming/lodos/module"
+	"container/list"
+	"math/rand"
+	"github.com/dming/lodos/rpc/argsutil"
 )
 
+/**
 type resultInfo struct {
 	Err  error      //错误结果 如果为nil表示请求正确
 	Result interface{} //结果
 }
+*/
 
 type agent struct {
-	Agent
-	session                          Session
+	//gate.Agent
+	module 							 module.FullModule
+	session                          gate.Session
 	conn                             network.Conn
 	r                                *bufio.Reader
 	w                                *bufio.Writer
-	gate                             *Gate
+	gate                             gate.GateInterface
 	client                           *mqtt.Client
 	isclose                          bool
 	last_storage_heartbeat_data_time int64 //上一次发送存储心跳时间
-	rev_num				int64
-	send_num			int64
+	rev_num							 int64
+	send_num			 			 int64
 }
 
-func (a *agent) IsClosed() bool {
-	return a.isclose
+func NewMqttAgent(module module.FullModule) *agent {
+	a := &agent{
+		module: module,
+	}
+	return a
 }
 
-func (a *agent) GetSession() Session {
-	return a.session
+func (a *agent) OnInit(gate gate.GateInterface, conn network.Conn) error {
+	a.conn = conn
+	a.gate = gate
+	a.r = bufio.NewReaderSize(conn, 256)
+	a.w = bufio.NewWriterSize(conn, 256)
+	a.isclose = false
+	a.rev_num = 0
+	a.send_num = 0
+	return nil
 }
+
 
 //as function init， call in tcp_server and ws_server
 func (a *agent) Run() (err error) {
@@ -60,7 +79,7 @@ func (a *agent) Run() (err error) {
 		return
 	}
 	if pack.GetType() != mqtt.CONNECT {
-		log.Error("Recive login pack's type error:%v \n", pack.GetType())
+		log.Error("Receive login pack's type error:%v \n", pack.GetType())
 		return
 	}
 	info, ok := (pack.GetVariable()).(*mqtt.Connect)
@@ -73,18 +92,18 @@ func (a *agent) Run() (err error) {
 	//log.Debug("Read login pack %s %s %s %s",*id,*psw,info.GetProtocol(),info.GetVersion())
 	c := mqtt.NewClient(conf.Conf.Mqtt, a, a.r, a.w, a.conn, info.GetKeepAlive())
 	a.client = c
-	a.session,err = NewSessionByMap(a.gate.App, map[string]interface{}{
+	a.session,err = NewSessionByMap(a.module.GetApp(), map[string]interface{}{
 		"Sessionid": Get_uuid(),
 		"Network":   a.conn.RemoteAddr().Network(),
 		"IP":        a.conn.RemoteAddr().String(),
-		"Serverid":  a.gate.GetServerId(),
+		"Serverid":  a.module.GetServerId(),
 		"Settings":  make(map[string]string),
 	})
 	if err != nil{
 		log.Error("gate create agent fail",err.Error())
 		return
 	}
-	a.gate.agentLearner.Connect(a) //发送连接成功的事件, 添加到连接列表, 即 gateHandler sessions
+	a.gate.GetAgentLearner().Connect(a) //发送连接成功的事件, 添加到连接列表, 即 gateHandler sessions
 
 	//回复客户端 CONNECT
 	err = mqtt.WritePack(mqtt.GetConnAckPack(0), a.w)
@@ -96,10 +115,26 @@ func (a *agent) Run() (err error) {
 	return nil
 }
 
+func (a *agent) Close() {
+	a.conn.Close()
+}
+
 func (a *agent) OnClose() error {
 	a.isclose = true
-	a.gate.agentLearner.DisConnect(a) //发送连接断开的事件
+	a.gate.GetAgentLearner().DisConnect(a) //发送连接断开的事件
 	return nil
+}
+
+func (a *agent) Destroy() {
+	a.conn.Destroy()
+}
+
+func (a *agent) IsClosed() bool {
+	return a.isclose
+}
+
+func (a *agent) GetSession() gate.Session {
+	return a.session
 }
 
 func (a *agent)RevNum() int64{
@@ -117,7 +152,24 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		}
 	}()
 
-	toResult := func(a *agent, Topic string, Result interface{}, Error error) (err error) {
+	toResult := func(a *agent, Topic string, Results []interface{}, errStr string) (err error) {
+		if Results == nil || len(Results) < 1 {
+			return fmt.Errorf("Results is nil")
+		}
+		switch v2 := Results[0].(type) {
+		case module.ProtocolMarshal:
+			return a.WriteMsg(Topic, v2.GetData())
+		}
+		b, err := a.module.GetApp().ProtocolMarshal(Results, errStr)
+		if err != nil {
+			log.Error(err.Error())
+			br, _ := a.module.GetApp().ProtocolMarshal(nil, err.Error())
+			return a.WriteMsg(Topic, br.GetData())
+		} else {
+			return a.WriteMsg(Topic, b.GetData())
+		}
+		return
+		/*
 		r := &resultInfo{
 			Err:  Error,
 			Result: Result,
@@ -135,7 +187,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			br, _ := json.Marshal(r)
 			a.WriteMsg(Topic, br)
 		}
-		return
+		*/
 	}
 
 	//路由服务
@@ -151,67 +203,83 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		} else if len(topics) == 3 {
 			msgid = topics[2]
 		}
-		var args map[string]interface{}
-		if pub.GetMsg()[0]=='{'&&pub.GetMsg()[len(pub.GetMsg())-1]=='}'{ //start from { and end with }..{}
+		//var args map[string]interface{}
+		var argsType []string = make([]string, 2)
+		var args [][]byte = make([][]byte, 2)
+		if pub.GetMsg()[0] =='{' && pub.GetMsg()[len(pub.GetMsg())-1] == '}'{ //start from { and end with }..{}
 			//尝试解析为json为map
-			var obj map[string]interface{}
+			var obj interface{} // var obj map[string]interface{}
 			err := json.Unmarshal(pub.GetMsg(), &obj)
 			if err != nil {
 				log.Debug("try to unmarshal as json and get error : %s, %s", err.Error(), string(pub.GetMsg()))
 				if msgid != "" {
-					toResult(a, *pub.GetTopic(), nil, fmt.Errorf("The JSON format is incorrect"))
+					toResult(a, *pub.GetTopic(), nil, "The JSON format is incorrect")
 				}
 				return
 			}
-			args = obj
-		}else{
-			log.Debug("msg should be unmarshal as json : %s", string(pub.GetMsg()))
-			if msgid != "" {
-				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("The JSON format is incorrect"))
-			}
-			return
+			argsType[1] = argsutil.MAP
+			args[1] = pub.GetMsg()
+		} else {
+			argsType[1] = argsutil.MAP
+			args[1] = pub.GetMsg()
 		}
+		//
 		hash := ""
 		if a.session.GetUserid() != "" {
 			hash = a.session.GetUserid()
 		} else {
-			hash = a.gate.GetServerId()
+			hash = a.module.GetServerId()
+		}
+		if (a.gate.GetTracingHandler() != nil) && a.gate.GetTracingHandler().OnRequestTracing(a.session, *pub.GetTopic(), pub.GetMsg()) {
+			a.session.CreateRootSpan("gate")
 		}
 
-		moduleSession, err := a.gate.GetApp().GetModuleSession(topics[0], hash)
+		moduleSession, err := a.module.GetApp().GetRouteServer(topics[0], hash)
 		if err != nil {
 			if msgid != "" {
-				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("Service(type:%s) not found", topics[0]))
+				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Service(type:%s) not found", topics[0]))
 			}
 			return
 		}
 		startsWith := strings.HasPrefix(topics[1], "HD_")
 		if !startsWith {
 			if msgid != "" {
-				toResult(a, *pub.GetTopic(), nil, fmt.Errorf("Method(%s) must begin with 'HD_'", topics[1]))
+				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Method(%s) must begin with 'HD_'", topics[1]))
 			}
 			return
 		}
-		if msgid != "" { //msgid means the flag of the msg(call)
-			//...something wrong
-			result, err := moduleSession.Call(topics[1], 5, a.GetSession(), args) //在此调用RPC。--dming
-			log.Info("call %s, result is %v, err is %v", topics[1], result, err)
-			toResult(a, *pub.GetTopic(), result, err) //返回结果给客户端
+		if msgid != "" { //msgid means the flag(or Cid) of the msg(call)..
+			argsType[0] = RPC_PARAM_SESSION_TYPE
+			b, err := a.GetSession().Serializable()
+			if err != nil {
+				return
+			}
+			args[0] = b
+			results, err := moduleSession.CallArgs(topics[1], argsType, args) //在此调用RPC。--dming
+			log.Info("call %s, result is %v, err is %v", topics[1], results, err)
+			toResult(a, *pub.GetTopic(), results, err.Error()) //返回结果给客户端
 			//...
-		}else{
-			_, e := moduleSession.Call(topics[1], 5, a.GetSession(), args)
-			if e!=nil{
-				log.Warning("Gate RPC",e.Error())
+		}else{ // if msgid is "", call no return rpc invoke
+			argsType[0] = RPC_PARAM_SESSION_TYPE
+			b, err := a.GetSession().Serializable()
+			if err != nil {
+				return
+			}
+			args[0] = b
+
+			e := moduleSession.CallArgsNR(topics[1], argsType, args)
+			if e != nil {
+				log.Warning("Gate RPC", e.Error())
 			}
 		}
 
 		if a.GetSession().GetUserid() != "" {
 			//这个链接已经绑定Userid
 			interval := time.Now().UnixNano()/1000 /1000 /1000 - a.last_storage_heartbeat_data_time //单位秒
-			if interval > a.gate.MinStorageHeartbeat {
+			if interval > a.gate.GetMinStorageHeartbeat() {
 				//如果用户信息存储心跳包的时长已经大于一秒
-				if a.gate.storage != nil {
-					a.gate.storage.Heartbeat(a.GetSession().GetUserid())
+				if a.gate.GetStorageHandler() != nil {
+					a.gate.GetStorageHandler().Heartbeat(a.GetSession().GetUserid())
 					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000 / 1000 / 1000
 				}
 			}
@@ -222,10 +290,10 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		if a.GetSession().GetUserid() != "" {
 			//这个链接已经绑定Userid
 			interval := time.Now().UnixNano()/1000 /1000 /1000 - a.last_storage_heartbeat_data_time //单位秒
-			if interval > a.gate.MinStorageHeartbeat {
+			if interval > a.gate.GetMinStorageHeartbeat() {
 				//如果用户信息存储心跳包的时长已经大于60秒
-				if a.gate.storage != nil {
-					a.gate.storage.Heartbeat(a.GetSession().GetUserid())
+				if a.gate.GetStorageHandler() != nil {
+					a.gate.GetStorageHandler().Heartbeat(a.GetSession().GetUserid())
 					a.last_storage_heartbeat_data_time = time.Now().UnixNano() / 1000 /1000 / 1000
 				}
 			}
@@ -238,14 +306,48 @@ func (a *agent) WriteMsg(topic string, body []byte) error {
 	return a.client.WriteMsg(topic, body)
 }
 
-func (a *agent) Close() {
-	a.conn.Close()
-}
 
-func (a *agent) Destroy() {
-	a.conn.Destroy()
-}
 
 func Get_uuid() string {
 	return uuid.Rand().Hex()
+}
+
+func TransNumToString(num int64) (string, error) {
+	var base int64
+	base = 62
+	baseHex := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	output_list := list.New()
+	for num/base != 0 {
+		output_list.PushFront(num % base)
+		num = num / base
+	}
+	output_list.PushFront(num % base)
+	str := ""
+	for iter := output_list.Front(); iter != nil; iter = iter.Next() {
+		str = str + string(baseHex[int(iter.Value.(int64))])
+	}
+	return str, nil
+}
+
+func TransStringToNum(str string) (int64, error) {
+
+	return 0, nil
+}
+
+// 函　数：生成随机数
+// 概　要：
+// 参　数：
+//      min: 最小值
+//      max: 最大值
+// 返回值：
+//      int64: 生成的随机数
+func RandInt64(min, max int64) int64 {
+	if min >= max {
+		return max
+	}
+	return rand.Int63n(max-min) + min
+}
+
+func TimeNow() time.Time {
+	return time.Now()
 }

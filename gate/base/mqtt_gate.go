@@ -14,9 +14,11 @@ import (
 )
 
 var RPC_PARAM_SESSION_TYPE="SESSION"
+var RPC_PARAM_ProtocolMarshal_TYPE = "ProtocolMarshal"
+
 
 type Gate struct {
-	module.RPCSerialize
+	//module.RPCSerialize
 	basemodule.BaseModule
 	MaxConnNum          int
 	MaxMsgLen           uint32
@@ -34,32 +36,83 @@ type Gate struct {
 	CertFile string
 	KeyFile  string
 	//
-	handler      gate.GateHandler
-	agentLearner gate.AgentLearner
-	storage      gate.StorageHandler
+	gateHandler    gate.GateHandler
+	agentLearner   gate.AgentLearner
+	sessionLearner gate.SessionLearner
+	storageHandler gate.StorageHandler
+	tracingHandler gate.TracingHandler
 }
 
+func (gate *Gate) GetType() string {
+	//很关键,需要与配置文件中的Module配置对应
+	return "Gate"
+}
+func (gate *Gate) Version() string {
+	//可以在监控时了解代码版本
+	return "v0.0.0-unset"
+}
+
+func (this *Gate) SetGateHandler(gateHandler gate.GateHandler) error {
+	this.gateHandler = gateHandler
+	return nil
+}
+func (this *Gate) SetAgentLearner(agentLearner gate.AgentLearner) error {
+	this.agentLearner = agentLearner
+	return nil
+}
+/**
+设置客户端连接和断开的监听器
+*/
+func (this *Gate) SetSessionLearner(sessionLearner gate.SessionLearner) error {
+	this.sessionLearner = sessionLearner
+	return nil
+}
 /**
 设置Session信息持久化接口
 */
-func (gate *Gate) SetStorageHandler(storage StorageHandler) error {
-	gate.storage = storage
+func (this *Gate) SetStorageHandler(storageHandler gate.StorageHandler) error {
+	this.storageHandler = storageHandler
+	return nil
+}
+func (this *Gate) SetTracingHandler(tracingHandler gate.TracingHandler) error {
+	this.tracingHandler = tracingHandler
 	return nil
 }
 
-func (gate *Gate) GetStorageHandler() (storage StorageHandler) {
-	return gate.storage
-}
-func (gate *Gate)OnConfChanged(settings *conf.ModuleSettings)  {
 
+func (this *Gate) GetGateHandler() gate.GateHandler {
+	return this.gateHandler
+}
+func (this *Gate) GetAgentLearner() gate.AgentLearner {
+	return this.agentLearner
+}
+func (this *Gate) GetSessionLearner() gate.SessionLearner {
+	return this.sessionLearner
+}
+func (this *Gate) GetStorageHandler() gate.StorageHandler {
+	return this.storageHandler
+}
+func (this *Gate) GetTracingHandler() gate.TracingHandler {
+	return this.tracingHandler
+}
+
+func (this *Gate) GetMinStorageHeartbeat() int64 {
+	return this.MinStorageHeartbeat
+}
+
+func (this *Gate) NewSession(data []byte) (gate.Session, error) {
+	return NewSession(this.GetApp(), data)
+}
+func (this *Gate) NewSessionByMap(data map[string]interface{}) (gate.Session, error) {
+	return NewSessionByMap(this.GetApp(), data)
 }
 
 /**
 自定义rpc参数序列化反序列化  Session
  */
-func (gate *Gate)Serialize(param interface{})(ptype string,p []byte, err error){
+func (this *Gate)Serialize(param interface{}) (ptype string,p []byte, err error){
 	switch v2 := param.(type) {
-	case Session:
+	case gate.Session:
 		bytes, err := v2.Serializable()
 		if err != nil{
 			return RPC_PARAM_SESSION_TYPE, nil, err
@@ -70,116 +123,124 @@ func (gate *Gate)Serialize(param interface{})(ptype string,p []byte, err error){
 	}
 }
 
-func (gate *Gate)Deserialize(ptype string,b []byte)(param interface{},err error){
+func (this *Gate)Deserialize(ptype string,b []byte)(param interface{},err error){
 	switch ptype {
 	case RPC_PARAM_SESSION_TYPE:
-		mps,errs:= NewSession(gate.App,b)
+		mps, errs:= NewSession(this.GetApp(), b)
 		if errs!=nil{
 			return	nil,errs
 		}
 		return mps,nil
+	case RPC_PARAM_ProtocolMarshal_TYPE:
+		return this.GetApp().NewProtocolMarshal(b), nil
 	default:
 		return	nil,fmt.Errorf("args [%s] Types not allowed",ptype)
 	}
 }
 
-func (gate *Gate)GetTypes()([]string){
+func (this *Gate)GetTypes()([]string){
 	return []string{RPC_PARAM_SESSION_TYPE}
 }
 
-func (gate *Gate) OnInit(app module.AppInterface, settings conf.ModuleSettings) {
-	gate.Skeleton.Init(app, settings) //这是必须的
-
+func (this *Gate) OnInit(app module.AppInterface, settings *conf.ModuleSettings) {
+	this.BaseModule.OnInit(app, this, settings) //这是必须的
 	//添加Session结构体的序列化操作类
-	err := app.AddRPCSerialize("gate", gate)
+	err := app.AddRPCSerialize("this", this)
 	if err!=nil{
 		log.Warning("Adding session structures failed to serialize interfaces",err.Error())
 	}
 
-	gate.MaxConnNum = int(settings.Settings["MaxConnNum"].(float64))
-	gate.MaxMsgLen = uint32(settings.Settings["MaxMsgLen"].(float64))
-	gate.WSAddr = settings.Settings["WSAddr"].(string)
-	gate.HTTPTimeout = time.Second * time.Duration(settings.Settings["HTTPTimeout"].(float64))
-	gate.TCPAddr = settings.Settings["TCPAddr"].(string)
+	this.MaxConnNum = int(settings.Settings["MaxConnNum"].(float64))
+	this.MaxMsgLen = uint32(settings.Settings["MaxMsgLen"].(float64))
+	if WSAddr, ok := settings.Settings["WSAddr"]; ok {
+		this.WSAddr = WSAddr.(string)
+	}
+	this.HTTPTimeout = time.Second * time.Duration(settings.Settings["HTTPTimeout"].(float64))
+	if TCPAddr, ok := settings.Settings["TCPAddr"]; ok {
+		this.TCPAddr = TCPAddr.(string)
+	}
 	if Tls, ok := settings.Settings["Tls"]; ok {
-		gate.Tls = Tls.(bool)
+		this.Tls = Tls.(bool)
 	} else {
-		gate.Tls = false
+		this.Tls = false
 	}
 	if CertFile, ok := settings.Settings["CertFile"]; ok {
-		gate.CertFile = CertFile.(string)
+		this.CertFile = CertFile.(string)
 	} else {
-		gate.CertFile = ""
+		this.CertFile = ""
 	}
 	if KeyFile, ok := settings.Settings["KeyFile"]; ok {
-		gate.KeyFile = KeyFile.(string)
+		this.KeyFile = KeyFile.(string)
 	} else {
-		gate.KeyFile = ""
+		this.KeyFile = ""
 	}
 
 	if MinHBStorage, ok := settings.Settings["MinHBStorage"]; ok {
-		gate.MinStorageHeartbeat = int64(MinHBStorage.(float64))
+		this.MinStorageHeartbeat = int64(MinHBStorage.(float64))
 	} else {
-		gate.MinStorageHeartbeat = 60
+		this.MinStorageHeartbeat = 60
 	}
 
-	handler := NewGateHandler(gate)
+	handler := NewGateHandler(this)
 
-	gate.agentLearner = handler.(AgentLearner)
-	gate.handler = handler
+	this.agentLearner = handler.(gate.AgentLearner)
+	this.gateHandler = handler
 
-	gate.GetServer().GetRpcServer().Register("Update", gate.handler.Update)
-	gate.GetServer().GetRpcServer().Register("Bind", gate.handler.Bind)
-	gate.GetServer().GetRpcServer().Register("UnBind", gate.handler.UnBind)
-	gate.GetServer().GetRpcServer().Register("PushSettings", gate.handler.PushSettings)
-	gate.GetServer().GetRpcServer().Register("Set", gate.handler.Set)
-	gate.GetServer().GetRpcServer().Register("Remove", gate.handler.Remove)
-	gate.GetServer().GetRpcServer().Register("Send", gate.handler.Send)
-	gate.GetServer().GetRpcServer().Register("Close", gate.handler.Close)
+	this.GetServer().GetRpcServer().Register("Update", this.gateHandler.Update)
+	this.GetServer().GetRpcServer().Register("Bind", this.gateHandler.Bind)
+	this.GetServer().GetRpcServer().Register("UnBind", this.gateHandler.UnBind)
+	this.GetServer().GetRpcServer().Register("Push", this.gateHandler.Push)
+	this.GetServer().GetRpcServer().Register("Set", this.gateHandler.Set)
+	this.GetServer().GetRpcServer().Register("Remove", this.gateHandler.Remove)
+	this.GetServer().GetRpcServer().Register("Send", this.gateHandler.Send)
+	this.GetServer().GetRpcServer().Register("SendBatch", this.gateHandler.SendBatch)
+	this.GetServer().GetRpcServer().Register("BroadCast", this.gateHandler.BroadCast)
+	this.GetServer().GetRpcServer().Register("IsConnect", this.gateHandler.IsConnect)
+	this.GetServer().GetRpcServer().Register("Close", this.gateHandler.Close)
 }
 
-func (gate *Gate) Run(closeSig chan bool) {
+func (this *Gate) Run(closeSig chan bool) {
 	var wsServer *network.WSServer
-	if gate.WSAddr != "" {
+	if this.WSAddr != "" {
 		wsServer = new(network.WSServer)
-		wsServer.Addr = gate.WSAddr
-		wsServer.MaxConnNum = gate.MaxConnNum
-		wsServer.MaxMsgLen = gate.MaxMsgLen
-		wsServer.HTTPTimeout = gate.HTTPTimeout
-		wsServer.Tls = gate.Tls
-		wsServer.CertFile = gate.CertFile
-		wsServer.KeyFile = gate.KeyFile
+		wsServer.Addr = this.WSAddr
+		wsServer.MaxConnNum = this.MaxConnNum
+		wsServer.MaxMsgLen = this.MaxMsgLen
+		wsServer.HTTPTimeout = this.HTTPTimeout
+		wsServer.Tls = this.Tls
+		wsServer.CertFile = this.CertFile
+		wsServer.KeyFile = this.KeyFile
 		wsServer.NewAgent = func(conn *network.WSConn) network.Agent {
 			a := &agent{
-				conn:    conn,
-				gate:    gate,
-				r:       bufio.NewReader(conn),
-				w:       bufio.NewWriter(conn),
-				isclose: false,
-				rev_num:0,
-				send_num:0,
+				conn:     conn,
+				gate:     this,
+				r:        bufio.NewReader(conn),
+				w:        bufio.NewWriter(conn),
+				isclose:  false,
+				rev_num:  0,
+				send_num: 0,
 			}
 			return a
 		}
 	}
 
 	var tcpServer *network.TCPServer
-	if gate.TCPAddr != "" {
+	if this.TCPAddr != "" {
 		tcpServer = new(network.TCPServer)
-		tcpServer.Addr = gate.TCPAddr
-		tcpServer.MaxConnNum = gate.MaxConnNum
-		tcpServer.Tls = gate.Tls
-		tcpServer.CertFile = gate.CertFile
-		tcpServer.KeyFile = gate.KeyFile
+		tcpServer.Addr = this.TCPAddr
+		tcpServer.MaxConnNum = this.MaxConnNum
+		tcpServer.Tls = this.Tls
+		tcpServer.CertFile = this.CertFile
+		tcpServer.KeyFile = this.KeyFile
 		tcpServer.NewAgent = func(conn *network.TCPConn) network.Agent {
 			a := &agent{
-				conn:    conn,
-				gate:    gate,
-				r:       bufio.NewReader(conn),
-				w:       bufio.NewWriter(conn),
-				isclose: false,
-				rev_num:0,
-				send_num:0,
+				conn:     conn,
+				gate:     this,
+				r:        bufio.NewReader(conn),
+				w:        bufio.NewWriter(conn),
+				isclose:  false,
+				rev_num:  0,
+				send_num: 0,
 			}
 			return a
 		}
@@ -192,6 +253,9 @@ func (gate *Gate) Run(closeSig chan bool) {
 		tcpServer.Start()
 	}
 	<-closeSig
+	if this.gateHandler != nil {
+		this.gateHandler.OnDestroy()
+	}
 	if wsServer != nil {
 		wsServer.Close()
 	}
@@ -200,6 +264,6 @@ func (gate *Gate) Run(closeSig chan bool) {
 	}
 }
 
-func (gate *Gate) OnDestroy() {
-	gate.Skeleton.Destroy() //这是必须的
+func (this *Gate) OnDestroy() {
+	this.BaseModule.OnDestroy() //这是必须的
 }

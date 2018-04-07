@@ -15,6 +15,7 @@ package gate
 
 import (
 	"github.com/opentracing/opentracing-go"
+	"github.com/dming/lodos/network"
 )
 
 type GateInterface interface {
@@ -32,14 +33,19 @@ type GateInterface interface {
 net代理服务 处理器
 */
 type GateHandler interface {
-	Bind(Sessionid string, Userid string) (result Session, err error)                   //Bind the session with the the Userid.
-	UnBind(Sessionid string) (result Session, err error)                                //UnBind the session with the the Userid.
-	Set(Sessionid string, key string, value string) (result Session, err error)    		//Set values (one or many) for the session.
-	Remove(Sessionid string, key string) (result Session, err error)      				//Remove value from the session.
-	PushSettings(Sessionid string, Settings map[string]string) (result Session, err error) 		//推送信息给Session
-	Send(Sessionid string, topic string, body []byte) (err error)   					//Send message to the session.
-	Close(Sessionid string) (err error)                             					//主动关闭连接
-	Update(Sessionid string) (result Session, err error)                                //更新整个Session 通常是其他模块拉取最新数据
+	Bind(Sessionid string, Userid string) (result Session, err error)                      //Bind the session with the the Userid.
+	UnBind(Sessionid string) (result Session, err error)                                   //UnBind the session with the the Userid.
+	Set(Sessionid string, key string, value string) (result Session, err error)            //Set values (one or many) for the session.
+	Remove(Sessionid string, key string) (result Session, err error)                       //Remove value from the session.
+	Push(Sessionid string, Settings map[string]string) (result Session, err error) //推送信息给Session
+	Send(Sessionid string, topic string, body []byte) (err error)                          //Send message to the session.
+	SendBatch(Sessionids string, topic string, body []byte) (int64, error)                //批量发送
+	BroadCast(topic string, body []byte) (int64, error)
+	Update(Sessionid string) (result Session, err error) //更新整个Session 通常是其他模块拉取最新数据
+	//查询某一个userId是否连接中，这里只是查询这一个网关里面是否有userId客户端连接，如果有多个网关就需要遍历了
+	IsConnect(Sessionid string, Userid string) (result bool, err error)
+	Close(Sessionid string) (err error)                  //主动关闭连接
+	OnDestroy()
 }
 
 type Session interface {
@@ -107,7 +113,7 @@ type StorageHandler interface {
 	存储用户的Session信息
 	Session Bind Userid以后每次设置 settings都会调用一次Storage
 	*/
-	Storage(Userid string, settings map[string]string) (err error)
+	Storage(Userid string, session Session) (err error)
 	/**
 	强制删除Session信息
 	*/
@@ -116,7 +122,7 @@ type StorageHandler interface {
 	获取用户Session信息
 	Bind Userid时会调用Query获取最新信息
 	*/
-	Query(Userid string) (settings map[string]string, err error)
+	Query(Userid string) (data []byte, err error)
 	/**
 	用户心跳,一般用户在线时1s发送一次
 	可以用来延长Session信息过期时间
@@ -142,8 +148,11 @@ type SessionLearner interface {
 }
 
 type Agent interface {
+	OnInit(gate GateInterface, conn network.Conn) error
 	WriteMsg(topic string, body []byte) error
+	Run() error
 	Close()
+	OnClose() error
 	Destroy()
 	RevNum() int64
 	SendNum() int64

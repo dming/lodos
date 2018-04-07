@@ -12,7 +12,7 @@ type DefaultModule struct {
 	Mi    module.Module
 	CloseSig chan bool
 	Wg       sync.WaitGroup
-	Settings 	conf.ModuleSettings
+	Settings 	*conf.ModuleSettings
 }
 
 func Run(m *DefaultModule) {

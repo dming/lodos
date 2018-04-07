@@ -46,6 +46,20 @@ type BaseModule struct {
 	statistical map[string]*StatisticalMethod //统计
 }
 
+func (m *BaseModule) OnInit(app module.AppInterface, module module.Module, settings *conf.ModuleSettings) {
+	m.app = app
+	m.settings = settings
+	m.statistical = map[string]*StatisticalMethod{}
+	m.GetServer().OnInit(app, module, settings)
+	m.GetServer().GetRpcServer().SetListener(module)
+}
+
+func (m *BaseModule) OnDestroy() {
+	//注销模块
+	//一定别忘了关闭RPC
+	m.GetServer().OnDestroy()
+}
+
 func (m *BaseModule) GetApp() module.AppInterface {
 	return m.app
 }
