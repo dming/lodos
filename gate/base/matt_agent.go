@@ -1,11 +1,11 @@
-package gate
+package basegate
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/dming/lodos/conf"
-	"github.com/dming/lodos/network/mqtt"
+	"github.com/dming/lodos/gate/mqtt"
 	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/network"
 	"github.com/dming/lodos/utils/uuid"
@@ -84,7 +84,7 @@ func (a *agent) Run() (err error) {
 		log.Error("gate create agent fail",err.Error())
 		return
 	}
-	a.gate.agentLearner.Connect(a) //发送连接成功的事件, 添加到连接列表, 即 handler sessions
+	a.gate.agentLearner.Connect(a) //发送连接成功的事件, 添加到连接列表, 即 gateHandler sessions
 
 	//回复客户端 CONNECT
 	err = mqtt.WritePack(mqtt.GetConnAckPack(0), a.w)
@@ -146,7 +146,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 		topics := strings.Split(*pub.GetTopic(), "/")
 		var msgid string
 		if len(topics) < 2 {
-			log.Error("Topic must be [moduleType@moduleID]/[handler] | [moduleType@moduleID]/[handler]/[msgid]")
+			log.Error("Topic must be [moduleType@moduleID]/[gateHandler] | [moduleType@moduleID]/[gateHandler]/[msgid]")
 			return
 		} else if len(topics) == 3 {
 			msgid = topics[2]

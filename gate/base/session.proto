@@ -1,5 +1,5 @@
 syntax = "proto3";
-package gate;
+package basegate;
 message sessionpb {
     string IP = 1;
     string Network = 2;
@@ -7,4 +7,5 @@ message sessionpb {
     string Sessionid = 4;
     string Serverid = 5;
     map<string, string> Settings = 6;
+    map<string, string> Carrier = 7;
 }

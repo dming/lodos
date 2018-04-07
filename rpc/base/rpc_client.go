@@ -215,15 +215,20 @@ func (c *rpcClient) Call(_func string, params ...interface{}) ([]interface{}, er
 	var args [][]byte = make([][]byte, len(params))
 	for k, param := range params {
 		var err error = nil
+		switch v2 := param.(type) { //多选语句switch
+		case gate.Session:
+			/**
+			如果参数是这个需要拷贝一份新的再传 ???? 用途是什么？？
+			用途就是更新span
+			//这个要换成本次RPC调用的新Span
+			se.Carrier = this.inject()
+			 */
+			param = v2.(gate.Session).Clone()
+		}
+
 		argsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
 		if err != nil {
 			return nil, fmt.Errorf("args[%d] error %s", k, err.Error())
-		}
-
-		switch v2 := param.(type) { //多选语句switch
-		case gate.Session:
-			//如果参数是这个需要拷贝一份新的再传 ???? 用途是什么？？
-			param = v2.(gate.Session).Clone()
 		}
 	}
 	return c.CallArgs(_func, argsType, args)
@@ -234,15 +239,15 @@ func (c *rpcClient) SyncCall(_func string, params ...interface{}) (chan rpcpb.Re
 	var args [][]byte = make([][]byte, len(params))
 	for k, param := range params {
 		var err error = nil
-		argsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
-		if err != nil {
-			return nil, fmt.Errorf("args[%d] error %s", k, err.Error())
-		}
-
 		switch v2 := param.(type) { //多选语句switch
 		case gate.Session:
 			//如果参数是这个需要拷贝一份新的再传 ???? 用途是什么？？
 			param = v2.(gate.Session).Clone()
+		}
+
+		argsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
+		if err != nil {
+			return nil, fmt.Errorf("args[%d] error %s", k, err.Error())
 		}
 	}
 	return c.SyncCallArgs(_func, argsType, args)
@@ -256,15 +261,15 @@ func (c *rpcClient) CallNR(_func string, params ...interface{}) (err error) {
 	var ArgsType []string = make([]string, len(params))
 	var args [][]byte = make([][]byte, len(params))
 	for k, param := range params {
-		ArgsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
-		if err != nil {
-			return fmt.Errorf("args[%d] error %s", k, err.Error())
-		}
-
 		switch v2 := param.(type) { //多选语句switch
 		case gate.Session:
 			//如果参数是这个需要拷贝一份新的再传
 			param = v2.Clone()
+		} //update and format later
+
+		ArgsType[k], args[k], err = argsutil.ArgsTypeAnd2Bytes(c.app, param)
+		if err != nil {
+			return fmt.Errorf("args[%d] error %s", k, err.Error())
 		}
 	}
 	return c.CallArgsNR(_func, ArgsType, args)

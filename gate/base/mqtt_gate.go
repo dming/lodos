@@ -1,4 +1,4 @@
-package gate
+package basegate
 
 import (
 	"bufio"
@@ -10,13 +10,14 @@ import (
 	"reflect"
 	log "github.com/dming/lodos/log"
 	"github.com/dming/lodos/module/base"
+	"github.com/dming/lodos/gate"
 )
 
 var RPC_PARAM_SESSION_TYPE="SESSION"
 
 type Gate struct {
 	module.RPCSerialize
-	basemodule.Skeleton
+	basemodule.BaseModule
 	MaxConnNum          int
 	MaxMsgLen           uint32
 	MinStorageHeartbeat int64 //Session持久化最短心跳包
@@ -33,9 +34,9 @@ type Gate struct {
 	CertFile string
 	KeyFile  string
 	//
-	handler      GateHandler
-	agentLearner AgentLearner
-	storage      StorageHandler
+	handler      gate.GateHandler
+	agentLearner gate.AgentLearner
+	storage      gate.StorageHandler
 }
 
 /**

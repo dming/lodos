@@ -10,7 +10,7 @@ It is generated from these files:
 It has these top-level messages:
 	Session
 */
-package gate
+package basegate
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
@@ -34,6 +34,7 @@ type sessionpb struct {
 	Sessionid string            `protobuf:"bytes,4,opt,name=Sessionid" json:"Sessionid,omitempty"`
 	Serverid  string            `protobuf:"bytes,5,opt,name=Serverid" json:"Serverid,omitempty"`
 	Settings  map[string]string `protobuf:"bytes,6,rep,name=Settings" json:"Settings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Carrier   map[string]string `protobuf:"bytes,7,rep,name=Carrier" json:"Carrier,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 func (m *sessionpb) Reset()                    { *m = sessionpb{} }
@@ -79,6 +80,13 @@ func (m *sessionpb) GetServerid() string {
 func (m *sessionpb) GetSettings() map[string]string {
 	if m != nil {
 		return m.Settings
+	}
+	return nil
+}
+
+func (this *session) GetCarrier() map[string]string {
+	if this != nil {
+		return this.Carrier
 	}
 	return nil
 }

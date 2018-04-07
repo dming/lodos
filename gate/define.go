@@ -13,6 +13,21 @@
 // limitations under the License.
 package gate
 
+import (
+	"github.com/opentracing/opentracing-go"
+)
+
+type GateInterface interface {
+	GetMinStorageHeartbeat() int64
+	GetGateHandler() GateHandler
+	GetAgentLearner() AgentLearner
+	GetSessionLearner() SessionLearner
+	GetStorageHandler() StorageHandler
+	GetTracingHandler() TracingHandler
+	NewSession(data []byte) (Session, error)
+	NewSessionByMap(data map[string]interface{}) (Session, error)
+}
+
 /**
 net代理服务 处理器
 */
@@ -40,18 +55,48 @@ type Session interface {
 	SetSessionid(sessionid string)
 	SetServerid(serverid string)
 	SetSettings(settings map[string]string)
-	Serializable()([]byte,error)
+	Serializable()([]byte, error)
 	Update() (error)
 	Bind(Userid string) (error)
 	UnBind() (error)
-	PushSettings() (error)
+	Push() (error)
 	Set(key string, value string) (error)
+	SetPush(key string, value string) (error) //设置值以后立即推送到gate网关
 	Get(key string) (result string)
 	Remove(key string) (error)
 	Send(topic string, body []byte) (error)
 	SendNR(topic string, body []byte) (error)
 	Close() (error)
 	Clone() Session
+
+	//查询某一个userId是否连接中，这里只是查询这一个网关里面是否有userId客户端连接，如果有多个网关就需要遍历了
+	IsConnect(userId string) (result bool, err error)
+	//是否是访客(未登录) ,默认判断规则为 userId==""代表访客
+	IsGuest() bool
+	//设置自动的访客判断函数,记得一定要在全局的时候设置这个值,以免部分模块因为未设置这个判断函数造成错误的判断
+	SetJudgeGuest(judgeGuest func(session Session) bool)
+	/**
+	通过Carrier数据构造本次rpc调用的tracing Span,如果没有就创建一个新的
+	*/
+	CreateRootSpan(openrationName string) opentracing.Span
+	/**
+	通过Carrier数据构造本次rpc调用的tracing Span,如果没有就返回nil
+	*/
+	LoadSpan(openrationName string) opentracing.Span
+	/**
+	获取本次rpc调用的tracing Span
+	*/
+	Span() opentracing.Span
+	/**
+	从Session的 Span继承一个新的Span
+	*/
+	ExtractSpan(operationName string) opentracing.Span
+
+	/**
+	获取Tracing的Carrier 可能为nil
+	*/
+	TracingCarrier() map[string]string
+	TracingId() string
 }
 
 /**
@@ -78,9 +123,22 @@ type StorageHandler interface {
 	*/
 	Heartbeat(Userid string)
 }
+
+type TracingHandler interface {
+	/**
+	是否需要对本次客户端请求进行跟踪
+	*/
+	OnRequestTracing(session Session, topic string, msg []byte) bool
+}
+
 type AgentLearner interface {
 	Connect(a Agent)    //当连接建立  并且MQTT协议握手成功
 	DisConnect(a Agent) //当连接关闭	或者客户端主动发送MQTT DisConnect命令
+}
+
+type SessionLearner interface {
+	Connect(a Session)    //当连接建立  并且MQTT协议握手成功
+	DisConnect(a Session) //当连接关闭	或者客户端主动发送MQTT DisConnect命令
 }
 
 type Agent interface {

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package gate
+package basegate
 
 import (
 	log "github.com/dming/lodos/log"
@@ -20,7 +20,7 @@ import (
 	"reflect"
 )
 
-type handler struct {
+type gateHandler struct {
 	//AgentLearner
 	//GateHandler
 	gate     *Gate
@@ -28,14 +28,14 @@ type handler struct {
 }
 
 func testAsAgentLearner() AgentLearner {
-	handler := &handler{
+	handler := &gateHandler{
 		sessions: safemap.NewBeeMap(),
 	}
 	return handler
 }
 
 func NewGateHandler(gate *Gate) GateHandler {
-	handler := &handler{
+	handler := &gateHandler{
 		gate:     gate,
 		sessions: safemap.NewBeeMap(),
 	}
@@ -43,14 +43,14 @@ func NewGateHandler(gate *Gate) GateHandler {
 }
 
 //当连接建立  并且MQTT协议握手成功
-func (h *handler) Connect(a Agent) {
+func (h *gateHandler) Connect(a Agent) {
 	if a.GetSession() != nil {
 		h.sessions.Set(a.GetSession().GetSessionid(), a)
 	}
 }
 
 //当连接关闭	或者客户端主动发送MQTT DisConnect命令
-func (h *handler) DisConnect(a Agent) {
+func (h *gateHandler) DisConnect(a Agent) {
 	if a.GetSession() != nil {
 		h.sessions.Delete(a.GetSession().GetSessionid())
 	}
@@ -59,7 +59,7 @@ func (h *handler) DisConnect(a Agent) {
 /**
  *更新整个Session 通常是其他模块拉取最新数据
  */
-func (h *handler) Update(Sessionid string) (result Session, err error) {
+func (h *gateHandler) Update(Sessionid string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
@@ -75,7 +75,7 @@ func (h *handler) Update(Sessionid string) (result Session, err error) {
 /**
  *Bind the session with the the Userid.
  */
-func (h *handler) Bind(Sessionid string, Userid string) (result Session, err error) {
+func (h *gateHandler) Bind(Sessionid string, Userid string) (result Session, err error) {
 	defer func() {
 		if r := recover(); r != nil{
 			log.Error("Error in Bind [%s]", r)
@@ -110,7 +110,7 @@ func (h *handler) Bind(Sessionid string, Userid string) (result Session, err err
 /**
  *UnBind the session with the the Userid.
  */
-func (h *handler) UnBind(Sessionid string) (result Session, err error) {
+func (h *gateHandler) UnBind(Sessionid string) (result Session, err error) {
 	//log.Debug("UnBind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
@@ -128,7 +128,7 @@ func (h *handler) UnBind(Sessionid string) (result Session, err error) {
 /**
  *Push the session with the the Userid.
  */
-func (h *handler) PushSettings(Sessionid string, Settings map[string]string) (result Session, err error) {
+func (h *gateHandler) PushSettings(Sessionid string, Settings map[string]string) (result Session, err error) {
 	//log.Debug("Push call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
@@ -154,7 +154,7 @@ func (h *handler) PushSettings(Sessionid string, Settings map[string]string) (re
 /**
  *Set values (one or many) for the session.
  */
-func (h *handler) Set(Sessionid string, key string, value string) (result Session, err error) {
+func (h *gateHandler) Set(Sessionid string, key string, value string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
@@ -180,7 +180,7 @@ func (h *handler) Set(Sessionid string, key string, value string) (result Sessio
 /**
  *Remove value from the session.
  */
-func (h *handler) Remove(Sessionid string, key string) (result Session, err error) {
+func (h *gateHandler) Remove(Sessionid string, key string) (result Session, err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
@@ -205,7 +205,7 @@ func (h *handler) Remove(Sessionid string, key string) (result Session, err erro
 /**
  *Send message to the session.
  */
-func (h *handler) Send(Sessionid string, topic string, body []byte) (err error) {
+func (h *gateHandler) Send(Sessionid string, topic string, body []byte) (err error) {
 	//log.Debug("Send call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
@@ -222,7 +222,7 @@ func (h *handler) Send(Sessionid string, topic string, body []byte) (err error) 
 /**
  *主动关闭连接
  */
-func (h *handler) Close(Sessionid string) (err error) {
+func (h *gateHandler) Close(Sessionid string) (err error) {
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {
 		err = fmt.Errorf("No Sesssion found")
