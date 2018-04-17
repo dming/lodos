@@ -124,7 +124,7 @@ func (s *redisServer) on_request_handle(done chan error) {
 				log.Error("error ", err)
 			}
 		} else if err != nil {
-			log.Warning("error %s", err.Error())
+			log.Error("error %s", err.Error())
 		}
 	}
 	log.Debug("finish on_request_handle")

@@ -13,7 +13,7 @@ import (
 
 type session struct {
 	app       module.AppInterface
-	sessionpb   *sessionpb
+	Sessionpb   *Sessionpb
 	//lock *sync.RWMutex
 	span opentracing.Span
 	judgeGuest func(session gate.Session) bool
@@ -21,24 +21,25 @@ type session struct {
 
 
 
-func NewSession(app module.AppInterface, data []byte) (gate.Session,error) {
+func NewSession(app module.AppInterface, data []byte) (gate.Session, error) {
 	s := &session{
 		app : app,
 		//lock : new(sync.RWMutex),
 	}
-	se := &sessionpb{}
+	se := &Sessionpb{}
 	err := proto.Unmarshal(data, se)
 	if err != nil {
 		return nil,err
 	}    // 测试结果
-	s.sessionpb = se
+	s.Sessionpb = se
+	s.judgeGuest = app.GetJudgeGuest()
 	return s, nil
 }
 
 func NewSessionByMap(app module.AppInterface, data map[string]interface{}) (gate.Session,error) {
 	s:= &session{
 		app:app,
-		sessionpb:new(sessionpb),
+		Sessionpb:new(Sessionpb),
 		//lock : new(sync.RWMutex),
 	}
 	err := s.updateMap(data)
@@ -49,48 +50,65 @@ func NewSessionByMap(app module.AppInterface, data map[string]interface{}) (gate
 	return s, nil
 }
 
+func (this *session) GetApp() module.AppInterface {
+	return this.app
+}
+
 func (this *session) GetIP() string {
-	return this.sessionpb.GetIP()
+	return this.Sessionpb.GetIP()
 }
 
 func (this *session) GetNetwork() string {
-	return this.sessionpb.GetNetwork()
+	return this.Sessionpb.GetNetwork()
 }
 
 func (this *session) GetUserid() string {
-	return this.sessionpb.GetUserid()
+	return this.Sessionpb.GetUserid()
 }
 
 func (this *session) GetSessionid() string {
-	return this.sessionpb.GetSessionid()
+	return this.Sessionpb.GetSessionid()
 }
 
 func (this *session) GetServerid() string {
-	return this.sessionpb.GetServerid()
+	return this.Sessionpb.GetServerid()
 }
 
 func (this *session) GetSettings() map[string]string {
-	return this.sessionpb.GetSettings()
+	return this.Sessionpb.GetSettings()
 }
 
+func (this *session) GetCarrier() map[string]string {
+	return this.Sessionpb.GetCarrier()
+}
+
+func (this *session) GetToken() string {
+	return this.Sessionpb.GetToken()
+}
 
 func (this *session)SetIP(ip string){
-	this.sessionpb.IP=ip
+	this.Sessionpb.IP=ip
 }
 func (this *session)SetNetwork(network string){
-	this.sessionpb.Network=network
+	this.Sessionpb.Network=network
 }
 func (this *session)SetUserid(userid string){
-	this.sessionpb.Userid=userid
+	this.Sessionpb.Userid=userid
 }
 func (this *session)SetSessionid(sessionid string){
-	this.sessionpb.Sessionid=sessionid
+	this.Sessionpb.Sessionid=sessionid
 }
 func (this *session)SetServerid(serverid string){
-	this.sessionpb.Serverid=serverid
+	this.Sessionpb.Serverid=serverid
 }
 func (this *session)SetSettings(settings map[string]string){
-	this.sessionpb.Settings=settings
+	this.Sessionpb.Settings=settings
+}
+func (this *session) SetCarrier(carrier map[string]string){
+	this.Sessionpb.Carrier = carrier
+}
+func (this *session) SetToken(token string){
+	this.Sessionpb.Token = token
 }
 
 func (this *session) updateMap(settings map[string]interface{}) error {
@@ -105,7 +123,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	Userid := settings["Userid"]
 	if Userid != nil {
 		if result, ok := Userid.(string); ok {
-			this.sessionpb.Userid = result
+			this.Sessionpb.Userid = result
 		} else {
 			err = fmt.Errorf("UserId can not format to string")
 		}
@@ -113,7 +131,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	IP := settings["IP"]
 	if IP != nil {
 		if result, ok := IP.(string); ok {
-			this.sessionpb.IP = result
+			this.Sessionpb.IP = result
 		} else {
 			err = fmt.Errorf("IP can not format to string")
 		}
@@ -121,7 +139,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	Network := settings["Network"]
 	if Network != nil {
 		if result, ok := Network.(string); ok {
-			this.sessionpb.Network = result
+			this.Sessionpb.Network = result
 		} else {
 			err = fmt.Errorf("Network can not format to string")
 		}
@@ -129,7 +147,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	Sessionid := settings["Sessionid"]
 	if Sessionid != nil {
 		if result, ok := Sessionid.(string); ok {
-			this.sessionpb.Sessionid = result
+			this.Sessionpb.Sessionid = result
 		} else {
 			err = fmt.Errorf("Sessionid can not format to string")
 		}
@@ -137,7 +155,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	Serverid := settings["Serverid"]
 	if Serverid != nil {
 		if result, ok := Serverid.(string); ok {
-			this.sessionpb.Serverid = result
+			this.Sessionpb.Serverid = result
 		} else {
 			err = fmt.Errorf("Serverid can not format to string")
 		}
@@ -145,7 +163,7 @@ func (this *session) updateMap(settings map[string]interface{}) error {
 	Settings := settings["Settings"]
 	if Settings != nil {
 		if result, ok := Settings.(map[string]string); ok {
-			this.sessionpb.Settings = result
+			this.Sessionpb.Settings = result
 		} else {
 			err = fmt.Errorf("Settings can not format to map[string]string")
 		}
@@ -162,23 +180,23 @@ func (this *session) update (s gate.Session) error {
 		}
 	}()
 
-	this.sessionpb.Userid = s.GetUserid()
+	this.Sessionpb.Userid = s.GetUserid()
 
-	this.sessionpb.IP = s.GetIP()
+	this.Sessionpb.IP = s.GetIP()
 
-	this.sessionpb.Network = s.GetNetwork()
+	this.Sessionpb.Network = s.GetNetwork()
 
-	this.sessionpb.Sessionid = s.GetSessionid()
+	this.Sessionpb.Sessionid = s.GetSessionid()
 
-	this.sessionpb.Serverid = s.GetServerid()
+	this.Sessionpb.Serverid = s.GetServerid()
 
-	this.sessionpb.Settings = s.GetSettings()
+	this.Sessionpb.Settings = s.GetSettings()
 
 	return nil
 }
 
 func (this *session) Serializable() ([]byte, error){
-	data, err := proto.Marshal(this.sessionpb)
+	data, err := proto.Marshal(this.Sessionpb)
 	if err != nil {
 		return nil, err
 	}    // 进行解码
@@ -199,12 +217,12 @@ func (this *session) Update() (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	server, err := this.app.GetServerById(this.sessionpb.GetServerid())
+	server, err := this.app.GetServerById(this.Sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("In Update, Service not found id(%this)", this.sessionpb.GetServerid())
+		return fmt.Errorf("In Update, Service not found id(%this)", this.Sessionpb.GetServerid())
 	}
 
-	results, err := server.Call("Update", this.sessionpb.GetSessionid())
+	results, err := server.Call("Update", this.Sessionpb.GetSessionid())
 	if err != nil {
 		return err
 	}
@@ -232,12 +250,12 @@ func (this *session) Bind(Userid string) (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	server, err := this.app.GetServerById(this.sessionpb.GetServerid())
+	server, err := this.app.GetServerById(this.Sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("in Bind, Service not found id(%this)", this.sessionpb.GetServerid())
+		return fmt.Errorf("in Bind, Service not found id(%this)", this.Sessionpb.GetServerid())
 	}
 
-	results, err := server.Call("Bind",  this.sessionpb.Sessionid, Userid)
+	results, err := server.Call("Bind",  this.Sessionpb.Sessionid, Userid)
 	//log.Debug("in Bind, results is : %v", results)
 	if err != nil {
 		return err
@@ -264,12 +282,12 @@ func (this *session) UnBind() (error) {
 	if this.app == nil {
 		return fmt.Errorf("Module.app is nil")
 	}
-	server, err := this.app.GetServerById(this.sessionpb.GetServerid())
+	server, err := this.app.GetServerById(this.Sessionpb.GetServerid())
 	if err != nil {
-		return fmt.Errorf("In UnBind ,Service not found id(%this), err is %this", this.sessionpb.GetServerid(), err)
+		return fmt.Errorf("In UnBind ,Service not found id(%this), err is %this", this.Sessionpb.GetServerid(), err)
 	}
 
-	result, err := server.Call("UnBind", this.sessionpb.Sessionid)
+	result, err := server.Call("UnBind", this.Sessionpb.Sessionid)
 	if err != nil {
 		return err
 	}
@@ -289,12 +307,12 @@ func (this *session) Push() (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	server, err := this.app.GetServerById(this.sessionpb.Serverid)
+	server, err := this.app.GetServerById(this.Sessionpb.Serverid)
 	if err != nil {
-		return fmt.Errorf("Service not found id(%this)", this.sessionpb.Serverid)
+		return fmt.Errorf("Service not found id(%this)", this.Sessionpb.Serverid)
 	}
-
-	result, err := server.Call("Push", this.sessionpb.Sessionid, this.sessionpb.Settings)
+	//cause timeout
+	result, err := server.Call("Push", this.Sessionpb.Sessionid, this.Sessionpb.Settings)
 	if err != nil {
 		return err
 	}
@@ -314,11 +332,11 @@ func (this *session) Set(key string, value string) (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	if this.sessionpb.Settings == nil {
-		this.sessionpb.Settings = map[string]string{}
+	if this.Sessionpb.Settings == nil {
+		this.Sessionpb.Settings = map[string]string{}
 	}
 	//this.lock.Lock()
-	this.sessionpb.Settings[key] = value
+	this.Sessionpb.Settings[key] = value
 	//this.lock.Unlock()
 	//server,e:=this.app.GetServersById(this.Serverid)
 	//if e!=nil{
@@ -339,19 +357,19 @@ func (this *session) SetPush(key string, value string) error {
 	if this.app == nil {
 		return fmt.Errorf("Module.App is nil")
 	}
-	if this.sessionpb.Settings == nil {
-		this.sessionpb.Settings = map[string]string{}
+	if this.Sessionpb.Settings == nil {
+		this.Sessionpb.Settings = map[string]string{}
 	}
-	this.sessionpb.Settings[key] = value
+	this.Sessionpb.Settings[key] = value
 	return this.Push()
 }
 
 func (this *session) Get(key string) (result string) {
-	if this.sessionpb.Settings == nil {
+	if this.Sessionpb.Settings == nil {
 		return
 	}
 	//this.lock.RLock()
-	result = this.sessionpb.Settings[key]
+	result = this.Sessionpb.Settings[key]
 	//this.lock.RUnlock()
 	return
 }
@@ -361,11 +379,11 @@ func (this *session) Remove(key string) (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	if this.sessionpb.Settings == nil {
-		this.sessionpb.Settings=map[string]string{}
+	if this.Sessionpb.Settings == nil {
+		this.Sessionpb.Settings=map[string]string{}
 	}
 	//this.lock.Lock()
-	delete(this.sessionpb.Settings, key)
+	delete(this.Sessionpb.Settings, key)
 	//this.lock.Unlock()
 	//server,e:=this.app.GetServersById(this.Serverid)
 	//if e!=nil{
@@ -386,12 +404,12 @@ func (this *session) Send(topic string, body []byte) (error) {
 	if this.app == nil {
 		return fmt.Errorf("Module.app is nil")
 	}
-	server, e := this.app.GetServerById(this.sessionpb.Serverid)
+	server, e := this.app.GetServerById(this.Sessionpb.Serverid)
 	if e != nil {
-		return fmt.Errorf("Service not found id(%this)", this.sessionpb.Serverid)
+		return fmt.Errorf("Service not found id(%this)", this.Sessionpb.Serverid)
 	}
 
-	_, err := server.Call("Send", this.sessionpb.Sessionid, topic, body)
+	_, err := server.Call("Send", this.Sessionpb.Sessionid, topic, body)
 	return err
 }
 
@@ -399,9 +417,9 @@ func (this *session) SendBatch(Sessionids string, topic string, body []byte) (in
 	if this.app == nil {
 		return 0, fmt.Errorf("Module.App is nil")
 	}
-	server, e := this.app.GetServerById(this.sessionpb.Serverid)
+	server, e := this.app.GetServerById(this.Sessionpb.Serverid)
 	if e != nil {
-		return 0, fmt.Errorf("Service not found id(%s)", this.sessionpb.Serverid)
+		return 0, fmt.Errorf("Service not found id(%s)", this.Sessionpb.Serverid)
 	}
 	count, err := server.Call("SendBatch", Sessionids, topic, body)
 	if err != nil {
@@ -415,12 +433,12 @@ func (this *session) SendNR(topic string, body []byte) (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	server, err := this.app.GetServerById(this.sessionpb.Serverid)
+	server, err := this.app.GetServerById(this.Sessionpb.Serverid)
 	if err != nil {
-		return fmt.Errorf("Service not found id(%this)", this.sessionpb.Serverid)
+		return fmt.Errorf("Service not found id(%this)", this.Sessionpb.Serverid)
 	}
 
-	err = server.CallNR("Send", this.sessionpb.Sessionid, topic, body)
+	err = server.CallNR("Send", this.Sessionpb.Sessionid, topic, body)
 	return err
 }
 
@@ -429,12 +447,12 @@ func (this *session) Close() (error) {
 		return fmt.Errorf("Module.app is nil")
 	}
 
-	server, err := this.app.GetServerById(this.sessionpb.Serverid)
+	server, err := this.app.GetServerById(this.Sessionpb.Serverid)
 	if err != nil {
-		return  fmt.Errorf("Service not found id(%this)", this.sessionpb.Serverid)
+		return  fmt.Errorf("Service not found id(%this)", this.Sessionpb.Serverid)
 	}
 
-	_, err = server.GetClient().Call("Close", 5, this.sessionpb.Sessionid)
+	_, err = server.GetClient().Call("Close", 5, this.Sessionpb.Sessionid)
 	return err
 }
 
@@ -446,18 +464,18 @@ func (this *session) Clone() gate.Session {
 		app:  this.app,
 		span: this.Span(),
 	}
-	se := &sessionpb{
-		IP:        this.sessionpb.IP,
-		Network:   this.sessionpb.Network,
-		Userid:    this.sessionpb.Userid,
-		Sessionid: this.sessionpb.Sessionid,
-		Serverid:  this.sessionpb.Serverid,
-		Settings:  this.sessionpb.Settings,
+	se := &Sessionpb{
+		IP:        this.Sessionpb.IP,
+		Network:   this.Sessionpb.Network,
+		Userid:    this.Sessionpb.Userid,
+		Sessionid: this.Sessionpb.Sessionid,
+		Serverid:  this.Sessionpb.Serverid,
+		Settings:  this.Sessionpb.Settings,
 	}
 	//这个要换成本次RPC调用的新Span
 	se.Carrier = this.inject()
 
-	s.sessionpb = se
+	s.Sessionpb = se
 	return s
 }
 
@@ -465,12 +483,20 @@ func (this *session) IsConnect(userId string) (bool, error) {
 	if this.app == nil {
 		return false, fmt.Errorf("Module.App is nil")
 	}
-	server, e := this.app.GetServerById(this.sessionpb.Serverid)
+	server, e := this.app.GetServerById(this.Sessionpb.Serverid)
 	if e != nil {
-		return false, fmt.Errorf("Service not found id(%s)", this.sessionpb.Serverid)
+		return false, fmt.Errorf("Service not found id(%s)", this.Sessionpb.Serverid)
 	}
-	result, err := server.Call("IsConnect", this.sessionpb.Sessionid, userId)
-	return result[0].(bool), err
+	results, err := server.Call("IsConnect", this.Sessionpb.Sessionid, userId)
+	if err != nil {
+		return false, err
+	}
+	if results != nil && len(results) > 0 {
+		if re, ok := results[0].(bool); ok {
+			return re, nil
+		}
+	}
+	return false, fmt.Errorf("RPC call [isConnect] get unsupport result")
 }
 
 
@@ -510,9 +536,9 @@ func (this *session) LoadSpan(operationName string) opentracing.Span {
 		return nil
 	}
 	if this.span == nil {
-		if this.sessionpb.Carrier != nil {
+		if this.Sessionpb.Carrier != nil {
 			//从已有记录恢复
-			clientContext, err := this.extract(this.sessionpb.Carrier)
+			clientContext, err := this.extract(this.Sessionpb.Carrier)
 			if err == nil {
 				this.span = this.app.GetTracer().StartSpan(
 					operationName, opentracing.ChildOf(clientContext))
@@ -529,7 +555,7 @@ func (this *session) CreateRootSpan(operationName string) opentracing.Span {
 		return nil
 	}
 	this.span = this.app.GetTracer().StartSpan(operationName)
-	this.sessionpb.Carrier = this.inject()
+	this.Sessionpb.Carrier = this.inject()
 	return this.span
 }
 
@@ -538,7 +564,7 @@ func (this *session) Span() opentracing.Span {
 }
 
 func (this *session) TracingCarrier() map[string]string {
-	return this.sessionpb.Carrier
+	return this.Sessionpb.Carrier
 }
 
 func (this *session) TracingId() string {
@@ -567,6 +593,9 @@ func (this *session) ExtractSpan(operationName string) opentracing.Span {
 //是否是访客(未登录) ,默认判断规则为 userId==""代表访客
 func (this *session) IsGuest() bool {
 	if this.judgeGuest != nil {
+		return this.judgeGuest(this)
+	} else if this.app != nil && this.app.GetJudgeGuest() != nil {
+		this.judgeGuest = this.app.GetJudgeGuest()
 		return this.judgeGuest(this)
 	}
 	if this.GetUserid() == "" {

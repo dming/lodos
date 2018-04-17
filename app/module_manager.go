@@ -31,8 +31,8 @@ func (mg *moduleManager) Init(app module.AppInterface, processId string) {
 				for _, setting := range modSettings {
 					//这里可能有BUG 公网IP和局域网IP处理方式可能不一样,先不管
 					if processId == setting.ProcessID {
-						mg.runMods = append(mg.runMods, mg.mods[i]) //这里加入能够运行的组件
 						mg.mods[i].Settings = setting
+						mg.runMods = append(mg.runMods, mg.mods[i]) //这里加入能够运行的组件
 					}
 				}
 				break //跳出内部循环

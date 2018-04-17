@@ -39,6 +39,7 @@ type BaseModule struct {
 	app      module.AppInterface
 	settings *conf.ModuleSettings
 	hash     string //server id
+	subclass module.FullModule
 	server   module.RpcServerModule
 	rwmutex  *sync.RWMutex
 	//useless now
@@ -46,12 +47,13 @@ type BaseModule struct {
 	statistical map[string]*StatisticalMethod //统计
 }
 
-func (m *BaseModule) OnInit(app module.AppInterface, module module.Module, settings *conf.ModuleSettings) {
+func (m *BaseModule) OnInit(app module.AppInterface, subclass module.FullModule, settings *conf.ModuleSettings) {
 	m.app = app
 	m.settings = settings
+	m.subclass = subclass
 	m.statistical = map[string]*StatisticalMethod{}
-	m.GetServer().OnInit(app, module, settings)
-	m.GetServer().GetRpcServer().SetListener(module)
+	//m.GetServer().OnInit(app, subclass.(module.Module), settings)
+	m.GetServer().GetRpcServer().SetListener(m)
 }
 
 func (m *BaseModule) OnDestroy() {
@@ -65,6 +67,9 @@ func (m *BaseModule) GetApp() module.AppInterface {
 }
 
 func (m *BaseModule) GetServer() module.RpcServerModule {
+	if m.server == nil {
+		m.server = NewRpcServerModule(m.subclass.GetApp(), m.subclass, m.GetModuleSetting())
+	}
 	return m.server
 }
 
@@ -77,7 +82,7 @@ func (m *BaseModule) GetModuleSetting() *conf.ModuleSettings {
 }
 
 func (m *BaseModule) RpcCall(moduleType string, _func string, params ...interface{}) ([]interface{}, error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +91,7 @@ func (m *BaseModule) RpcCall(moduleType string, _func string, params ...interfac
 
 
 func (m *BaseModule) RpcSyncCall(moduleType string, _func string, params ...interface{}) (chan rpcpb.ResultInfo, error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +99,7 @@ func (m *BaseModule) RpcSyncCall(moduleType string, _func string, params ...inte
 }
 
 func (m *BaseModule) RpcCallNR(moduleType string, _func string, params ...interface{}) (err error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return err
 	}
@@ -102,7 +107,7 @@ func (m *BaseModule) RpcCallNR(moduleType string, _func string, params ...interf
 }
 
 func (m *BaseModule) RpcCallArgs(moduleType string, _func string, ArgsType []string, Args [][]byte) ([]interface{}, error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +115,7 @@ func (m *BaseModule) RpcCallArgs(moduleType string, _func string, ArgsType []str
 }
 
 func (m *BaseModule) RpcSyncCallArgs(moduleType string, _func string, ArgsType []string, Args [][]byte) (chan rpcpb.ResultInfo, error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +123,7 @@ func (m *BaseModule) RpcSyncCallArgs(moduleType string, _func string, ArgsType [
 }
 
 func (m *BaseModule) RpcCallArgsNR(moduleType string, _func string, ArgsType []string, Args [][]byte) (err error) {
-	server, err := m.app.GetRouteServer(moduleType, m.hash)
+	server, err := m.app.GetRouteServer(moduleType, m.subclass.GetServerId())
 	if err != nil {
 		return err
 	}
@@ -126,8 +131,7 @@ func (m *BaseModule) RpcCallArgsNR(moduleType string, _func string, ArgsType []s
 }
 
 func (m *BaseModule) GetRouteServer(filter string, hash string) (module.ModuleSession, error) {
-	//return m.app.GetRouteServer(moduleType, hash)
-	return nil, nil
+	return m.app.GetRouteServer(filter, hash)
 }
 
 func (m *BaseModule) GetStatistical() (statistical string, err error) {
@@ -166,4 +170,8 @@ func (m *BaseModule) OnAppConfigurationLoaded(app module.AppInterface) {
 
 func (m *BaseModule) OnConfChanged(settings *conf.ModuleSettings) {
 	//
+}
+
+func (m *BaseModule) GetSubclass() module.FullModule {
+	return m.subclass
 }

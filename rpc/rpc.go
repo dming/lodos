@@ -67,7 +67,7 @@ type RPCClient interface {
 
 type LocalServer interface {
 	IsClose() bool
-	Write(callInfo CallInfo) (err error)
+	WriteToRpcServer(callInfo CallInfo) (success bool)
 	StopConsume() (err error)
 	Shutdown() (err error)
 	Callback(callInfo CallInfo) (err error)
@@ -87,7 +87,6 @@ type GoroutineControl interface {
 	Wait() (err error)
 	Finish()
 }
-
 
 /*
 type Client interface {

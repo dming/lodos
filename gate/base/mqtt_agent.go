@@ -87,23 +87,30 @@ func (a *agent) Run() (err error) {
 		log.Error("It's not a mqtt connection package.")
 		return
 	}
-	//id := info.GetUserName()
-	//psw := info.GetPassword()
+	carrier := make(map[string]string)
+	if id := info.GetUserName(); *id != ""{
+		carrier["username"] = *id
+	}
+	if pwd := info.GetPassword(); *pwd != ""{
+		carrier["password"] = *pwd
+	}
 	//log.Debug("Read login pack %s %s %s %s",*id,*psw,info.GetProtocol(),info.GetVersion())
 	c := mqtt.NewClient(conf.Conf.Mqtt, a, a.r, a.w, a.conn, info.GetKeepAlive())
 	a.client = c
-	a.session,err = NewSessionByMap(a.module.GetApp(), map[string]interface{}{
+	a.session, err = NewSessionByMap(a.module.GetApp(), map[string]interface{}{
 		"Sessionid": Get_uuid(),
 		"Network":   a.conn.RemoteAddr().Network(),
 		"IP":        a.conn.RemoteAddr().String(),
 		"Serverid":  a.module.GetServerId(),
 		"Settings":  make(map[string]string),
+		"Carrier":	 carrier,
 	})
 	if err != nil{
-		log.Error("gate create agent fail",err.Error())
+		log.Error("gate create agent fail, %s", err.Error())
 		return
 	}
 	a.gate.GetAgentLearner().Connect(a) //发送连接成功的事件, 添加到连接列表, 即 gateHandler sessions
+	log.Info("Gate create mqtt-agent success, remote IP is %s", a.session.GetIP())
 
 	//回复客户端 CONNECT
 	err = mqtt.WritePack(mqtt.GetConnAckPack(0), a.w)
@@ -154,7 +161,8 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 
 	toResult := func(a *agent, Topic string, Results []interface{}, errStr string) (err error) {
 		if Results == nil || len(Results) < 1 {
-			return fmt.Errorf("Results is nil")
+			br, _ := a.module.GetApp().ProtocolMarshal(nil, errStr)
+			return a.WriteMsg(Topic, br.GetData())
 		}
 		switch v2 := Results[0].(type) {
 		case module.ProtocolMarshal:
@@ -211,7 +219,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			var obj interface{} // var obj map[string]interface{}
 			err := json.Unmarshal(pub.GetMsg(), &obj)
 			if err != nil {
-				log.Debug("try to unmarshal as json and get error : %s, %s", err.Error(), string(pub.GetMsg()))
+				log.Warning("try to unmarshal as json and get error : %s, %s", err.Error(), string(pub.GetMsg()))
 				if msgid != "" {
 					toResult(a, *pub.GetTopic(), nil, "The JSON format is incorrect")
 				}
@@ -219,8 +227,9 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			}
 			argsType[1] = argsutil.MAP
 			args[1] = pub.GetMsg()
+			log.Info("pub.GetMsg() is %s", pub.GetMsg())
 		} else {
-			argsType[1] = argsutil.MAP
+			argsType[1] = argsutil.BYTES
 			args[1] = pub.GetMsg()
 		}
 		//
@@ -239,6 +248,7 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			if msgid != "" {
 				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Service(type:%s) not found", topics[0]))
 			}
+			log.Error(err.Error())
 			return
 		}
 		startsWith := strings.HasPrefix(topics[1], "HD_")
@@ -246,23 +256,32 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			if msgid != "" {
 				toResult(a, *pub.GetTopic(), nil, fmt.Sprintf("Method(%s) must begin with 'HD_'", topics[1]))
 			}
+			log.Error("Method(%s) must begin with 'HD_'", topics[1])
 			return
 		}
+
 		if msgid != "" { //msgid means the flag(or Cid) of the msg(call)..
 			argsType[0] = RPC_PARAM_SESSION_TYPE
 			b, err := a.GetSession().Serializable()
 			if err != nil {
+				log.Error(err.Error())
 				return
 			}
 			args[0] = b
 			results, err := moduleSession.CallArgs(topics[1], argsType, args) //在此调用RPC。--dming
 			log.Info("call %s, result is %v, err is %v", topics[1], results, err)
-			toResult(a, *pub.GetTopic(), results, err.Error()) //返回结果给客户端
-			//...
+			var errStr string
+			if err != nil {
+				errStr = err.Error()
+			} else {
+				errStr = ""
+			}
+			toResult(a, *pub.GetTopic(), results, errStr) //返回结果给客户端
 		}else{ // if msgid is "", call no return rpc invoke
 			argsType[0] = RPC_PARAM_SESSION_TYPE
 			b, err := a.GetSession().Serializable()
 			if err != nil {
+				log.Error(err.Error())
 				return
 			}
 			args[0] = b

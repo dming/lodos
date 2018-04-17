@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 func TestSession(t *testing.T) {
-	s := &sessionpb{        // 使用辅助函数设置域的值
+	s := &Sessionpb{        // 使用辅助函数设置域的值
 		IP: *proto.String("127.0.0.1"),
 		Network:  *proto.String("tcp"),
 		Sessionid:  *proto.String("iii"),
@@ -28,7 +28,7 @@ func TestSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshaling error: ", err)
 	}    // 进行解码
-	newSessionpb := &sessionpb{}
+	newSessionpb := &Sessionpb{}
 	err = proto.Unmarshal(data, newSessionpb)
 	if err != nil {
 		t.Fatalf("unmarshaling error: ", err)

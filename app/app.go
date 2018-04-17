@@ -93,13 +93,13 @@ func (a *app) OnInit(settings conf.Config) error {
 			}
 			if a.GetProcessID() != mInfo.ProcessID {
 				//同一个ProcessID下的模块直接通过local channel通信就可以了
-				if mInfo.RabbitmqInfo != nil {
+				if mInfo.Rabbitmq != nil {
 					//如果远程的rpc存在则创建一个对应的客户端
-					client.NewRabbitmqRpcClient(mInfo.RabbitmqInfo)
+					client.NewRabbitmqRpcClient(mInfo.Rabbitmq)
 				}
-				if mInfo.RedisInfo != nil {
+				if mInfo.Redis != nil {
 					//如果远程的rpc存在则创建一个对应的客户端
-					client.NewRedisRpcClient(mInfo.RedisInfo)
+					client.NewRedisRpcClient(mInfo.Redis)
 				}
 			}
 			session := basemodule.NewModuleSession(a, mInfo.Id, Type, client)
@@ -136,8 +136,8 @@ func (a *app) Run(debug bool, mods ...module.Module) error {
 
 	}// get ApplicationDir
 
-	defaultConfPath := fmt.Sprintf("%s/bin/conf/server.json", ApplicationDir)
-	defaultLogPath := fmt.Sprintf("%s/bin/logs", ApplicationDir)
+	defaultConfPath := fmt.Sprintf("%s/conf/server.conf", ApplicationDir)
+	defaultLogPath := fmt.Sprintf("%s/logs", ApplicationDir)
 
 	if *confPath == "" {
 		*confPath = defaultConfPath
@@ -163,7 +163,7 @@ func (a *app) Run(debug bool, mods ...module.Module) error {
 	fmt.Println("Server configuration file path :", *confPath)
 	conf.LoadConfig(f.Name()) //加载配置文件
 	a.ConfigSettings(conf.Conf)  //配置信息
-	//log.InitBeego(debug, *ProcessID, *Logdir, conf.Conf.Log)
+	log.InitBeego(debug, *ProcessID, *Logdir, conf.Conf.Log)
 
 	log.Info("Lodos %v starting up", a.version)
 
@@ -183,6 +183,10 @@ func (a *app) Run(debug bool, mods ...module.Module) error {
 	if a.startUp != nil {
 		a.startUp(a)
 	}
+	if a.judgeGuest == nil {
+		log.Warning("App.judgeGuest is still nil, it would cause all user just be guest ")
+	}
+	log.Info("Server started : %s", *confPath)
 	// close
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -198,7 +202,6 @@ func (a *app) OnDestroy() error {
 		err := session.GetClient().Done()
 		if err != nil {
 			log.Warning("rpcClient close fail type(%s) id(%s)", session.GetType(), id)
-			fmt.Printf("rpcClient close fail type(%s) id(%s)", session.GetType(), id)
 		} else {
 			log.Info("rpcClient close success type(%s) id(%s)", session.GetType(), id)
 		}

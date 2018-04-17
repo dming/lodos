@@ -39,15 +39,20 @@ type Rabbitmq struct {
 	ConsumerTag  string //消费者TAG
 }
 
-/*
-type RedisInfo struct {
-	redis.Options
-}*/
+type Mongo struct {
+	Uri string // [username]:[password]@[ip]:[port]/[db]
+	DB string
+}
 
 type Redis struct {
 	Uri string  //redis://:[password]@[ip]:[port]/[db]
 	Queue string
 }
+/*
+type Redis struct {
+	redis.Options
+}*/
+
 
 type RPC struct {
 	MaxCoroutine int //模块同时可以创建的最大协程数量默认是100
@@ -57,13 +62,13 @@ type RPC struct {
 }
 
 type ModuleSettings struct {
-	Id string
-	Host string
+	Id        string
+	Host      string
 	ProcessID string
 	Settings  map[string]interface{}
-	RabbitmqInfo *Rabbitmq
-	//redisInfo *RedisInfo
-	RedisInfo *Redis
+	Rabbitmq  *Rabbitmq
+	Redis     *Redis
+	Mongo	  *Mongo
 }
 
 type Mqtt struct {
@@ -122,6 +127,12 @@ func LoadConfig(Path string) {
 	// Read config.
 	if err := readFileInto(Path); err != nil {
 		panic(err)
+	}
+	if Conf.RPC.MaxCoroutine == 0 {
+		Conf.RPC.MaxCoroutine = 100
+	}
+	if Conf.RPC.RpcExpired == 0 {
+		Conf.RPC.RpcExpired = 2
 	}
 }
 

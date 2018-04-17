@@ -30,12 +30,19 @@ func (s *localServer) IsClose() bool {
 	return s.isClose;
 }
 
-func (s *localServer) Write(callInfo rpc.CallInfo) error {
+func (s *localServer) WriteToRpcServer(callInfo rpc.CallInfo) (success bool) {
+	defer func() {
+		if recover() != nil {
+			log.Error("s.call_chan is closed")
+			success = false
+		}
+	}()
+
 	if s.isClose {
-		return fmt.Errorf("LocalServer is isClose.")
+		return false
 	}
-	s.local_chan <- callInfo
-	return nil
+	s.call_chan <- callInfo
+	return true
 }
 
 //stop
@@ -64,7 +71,7 @@ func (s *localServer) Callback (callInfo rpc.CallInfo) error {
 	return nil
 }
 
-func (s *localServer) on_request_handle(local_chan <- chan rpc.CallInfo) {
+func (s *localServer) on_request_handle(local_chan <-chan rpc.CallInfo) {
 	for {
 		select {
 		case callInfo, ok := <-local_chan:
@@ -72,8 +79,8 @@ func (s *localServer) on_request_handle(local_chan <- chan rpc.CallInfo) {
 				local_chan = nil
 			} else {
 				callInfo.Agent = s
-				if (s.SafeSend(s.call_chan, callInfo)) {
-					log.Warning("rpc request fail : [%s]", callInfo.RpcInfo.Cid)
+				if s.WriteToRpcServer(callInfo) {
+					log.Warning("rpc request [%s] fail : [%s]", callInfo.RpcInfo.Fn, callInfo.RpcInfo.Cid)
 				}
 			}
 		}
@@ -83,7 +90,7 @@ func (s *localServer) on_request_handle(local_chan <- chan rpc.CallInfo) {
 	}
 }
 
-func (s *localServer) SafeCallback(local_chan chan rpcpb.ResultInfo, callInfo rpcpb.ResultInfo) (closed bool) {
+func (s *localServer) SafeCallback(local_chan chan rpcpb.ResultInfo, resultInfo rpcpb.ResultInfo) (closed bool) {
 	defer func() {
 		if recover() != nil {
 			closed = true
@@ -91,10 +98,10 @@ func (s *localServer) SafeCallback(local_chan chan rpcpb.ResultInfo, callInfo rp
 	}()
 
 	// assume ch != nil here.
-	local_chan <- callInfo
+	local_chan <- resultInfo
 	return false
 }
-func (s *localServer) SafeSend(local_chan chan rpc.CallInfo, callInfo rpc.CallInfo) (closed bool) {
+func (s *localServer) SafeSend(call_chan chan rpc.CallInfo, callInfo rpc.CallInfo) (closed bool) {
 	defer func() {
 		if recover() != nil {
 			closed = true
@@ -102,7 +109,7 @@ func (s *localServer) SafeSend(local_chan chan rpc.CallInfo, callInfo rpc.CallIn
 	}()
 
 	// assume ch != nil here.
-	local_chan <- callInfo
+	call_chan <- callInfo
 	return false
 }
 

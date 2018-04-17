@@ -75,11 +75,12 @@ func (c *localClient) Call(callInfo rpc.CallInfo, callback_chan chan rpcpb.Resul
 		timeout:        callInfo.RpcInfo.Expired,
 	}
 	c.callInfos.Set(correlation_id, *ClientCallInfo)
+	callInfo.Agent = c.local_server
 	callInfo.Props = map[string]interface{}{
 		"reply_to": c.result_chan,
 	}
 	//发送消息
-	c.local_server.Write(callInfo)
+	c.local_server.WriteToRpcServer(callInfo)
 
 	return nil
 }
@@ -97,7 +98,7 @@ func (c *localClient) CallNR(callInfo rpc.CallInfo) (err error) {
 		return fmt.Errorf("MQClient is isClose")
 	}
 	//发送消息
-	c.local_server.Write(callInfo)
+	c.local_server.WriteToRpcServer(callInfo)
 
 	return nil
 }

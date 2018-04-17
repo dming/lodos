@@ -1,11 +1,11 @@
 package basemodule
 
 import (
-	"github.com/dming/lodos/rpc"
-	"github.com/dming/lodos/conf"
 	"github.com/dming/lodos/module"
+	"github.com/dming/lodos/conf"
+	"github.com/dming/lodos/rpc"
 	"github.com/dming/lodos/rpc/base"
-	log "github.com/dming/lodos/log"
+	"github.com/dming/lodos/log"
 )
 
 func NewRpcServerModule(app module.AppInterface, module module.Module, settings *conf.ModuleSettings) module.RpcServerModule {
@@ -13,6 +13,7 @@ func NewRpcServerModule(app module.AppInterface, module module.Module, settings 
 	rs.OnInit(app, module, settings)
 	return  rs
 }
+
 
 type rpcServerModule struct {
 	App module.AppInterface
@@ -22,18 +23,21 @@ type rpcServerModule struct {
 
 func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module, settings *conf.ModuleSettings)  {
 	rs.settings = settings
-	//server := baserpc.NewServer() //默认会创建一个本地的RPC
+	//默认会创建一个本地的RPC
 	server, err := baserpc.NewRPCServer(app, module)
 	if err != nil {
 		log.Error("fail in dialing rpc server : %s", err)
 	}
-	if settings.RabbitmqInfo != nil {
+	logInfo := "local, "
+	if settings.Rabbitmq != nil {
 		//存在远程rpc的配置
-		server.NewRabbitmqRpcServer(settings.RabbitmqInfo)
+		server.NewRabbitmqRpcServer(settings.Rabbitmq)
+		logInfo += "rabbitmq, "
 	}
-	if settings.RedisInfo != nil {
+	if settings.Redis != nil {
 		//存在远程redis rpc的配置
-		server.NewRedisRpcServer(settings.RedisInfo)
+		server.NewRedisRpcServer(settings.Redis)
+		logInfo += "redis"
 	}
 
 	rs.server = server
@@ -43,7 +47,7 @@ func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module
 	if err != nil {
 		log.Warning("RegisterLocalClient: id(%s) error(%s)", settings.Id, err)
 	}
-	log.Info("RPCServer init success id(%s)", rs.settings.Id)
+	log.Info("RPCServer init success id(%s), include %s", rs.settings.Id, logInfo)
 }
 
 func (rs *rpcServerModule) OnDestroy() {

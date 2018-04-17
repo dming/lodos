@@ -121,15 +121,19 @@ func (c *rpcClient) CallArgs(_func string, ArgsType []string, args [][]byte) ([]
 	if !ok {
 		return nil, fmt.Errorf("rpc client closed")
 	}
+	if resultInfo.Error != "" {
+		return nil, fmt.Errorf(resultInfo.Error)
+	}
+
 	if len(resultInfo.Results) != len(resultInfo.ResultsType) {
-		resultInfo.Error += " len(resultInfo.Results) != len(resultInfo.ResultsType) "
+		resultInfo.Error += " ###len(resultInfo.Results) != len(resultInfo.ResultsType)### "
 		return nil, fmt.Errorf(resultInfo.Error)
 	}
 	results := make([]interface{}, len(resultInfo.Results))
 	for i := 0; i < len(resultInfo.Results); i++ {
 		results[i], err = argsutil.Bytes2Args(c.app, resultInfo.ResultsType[i], resultInfo.Results[i])
 		if err != nil {
-			return nil, fmt.Errorf(resultInfo.Error + err.Error())
+			return nil, fmt.Errorf(resultInfo.Error + ", FormatError: " + err.Error())
 		}
 	}
 	if c.app.GetSettings().RPC.Log {
@@ -281,15 +285,18 @@ func (c *rpcClient) ResolveCallbackChan(callback_chan chan rpcpb.ResultInfo, _fu
 	if !ok {
 		return nil, fmt.Errorf("client closed")
 	}
+	if resultInfo.Error != "" {
+		return nil, fmt.Errorf(resultInfo.Error)
+	}
 	if len(resultInfo.Results) != len(resultInfo.ResultsType) {
-		resultInfo.Error += " len(resultInfo.Results) != len(resultInfo.ResultsType) "
+		resultInfo.Error += " ###len(resultInfo.Results) != len(resultInfo.ResultsType)### "
 		return nil, fmt.Errorf(resultInfo.Error)
 	}
 	results := make([]interface{}, len(resultInfo.Results))
 	for i := 0; i < len(resultInfo.Results); i++ {
 		results[i], err = argsutil.Bytes2Args(c.app, resultInfo.ResultsType[i], resultInfo.Results[i])
 		if err != nil {
-			return nil, fmt.Errorf(resultInfo.Error + err.Error())
+			return nil, fmt.Errorf(resultInfo.Error + ", FormatError: " + err.Error())
 		}
 	}
 	if c.app.GetSettings().RPC.Log {

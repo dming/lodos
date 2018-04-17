@@ -60,9 +60,12 @@ func (this RedisFactory) GetPool(url string) *redis.Pool {
 	}
 	if pool != nil {
 		this.pools.Set(url, pool)
+	} else {
+
 	}
 	return pool
 }
+
 func (this RedisFactory) CloseAllPool() {
 	for _, pool := range this.pools.Items() {
 		pool.(*redis.Pool).Close()

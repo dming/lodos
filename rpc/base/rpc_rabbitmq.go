@@ -78,7 +78,7 @@ func (this *RabbitAgent) Shutdown() error {
 */
 func (this *RabbitAgent) WConnect() error {
 	var err error
-	log.Info("dialing %q", this.info.Uri)
+	log.Info("WConnect dialing %q", this.info.Uri)
 	this.wconn, err = amqp.Dial(this.info.Uri) //打开连接
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (this *RabbitAgent) WConnect() error {
 */
 func (this *RabbitAgent) RConnect() error {
 	var err error
-	log.Info("dialing %q", this.info.Uri)
+	log.Info("RConnect dialing %q", this.info.Uri)
 	this.rconn, err = amqp.Dial(this.info.Uri) //打开连接
 	if err != nil {
 		return err
@@ -306,10 +306,13 @@ func (this *RabbitAgent) Queue() error {
 */
 func (this *RabbitAgent) on_r_disconnect(closeError chan *amqp.Error) {
 	select {
-	case <-closeError:
+	case err := <-closeError:
 		if this.shutdown {
 			//业务停止了，不需要重新连接
 			return
+		}
+		if err != nil {
+			log.Error(fmt.Sprintf("Reason: %s, \n Error: %s", err.Reason, err.Error()))
 		}
 		time.Sleep(time.Second * 1) //一秒以后重试
 		this.RConnect()

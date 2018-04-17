@@ -207,7 +207,7 @@ func (h *gateHandler) Push(Sessionid string, Settings map[string]string) (result
 		err = fmt.Errorf("No Sesssion found")
 		return nil, err
 	} else if _, ok := agent.(gate.Agent); !ok {
-		err = fmt.Errorf("In PushSettings, %s can not convert to Agent", reflect.TypeOf(agent).String())
+		err = fmt.Errorf("In Push, %s can not convert to Agent", reflect.TypeOf(agent).String())
 		return nil, err
 	}
 	agent.(gate.Agent).GetSession().SetSettings(Settings)

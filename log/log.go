@@ -12,44 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 package log
+
 import (
+	"github.com/dming/lodos/log/beego"
 	"github.com/dming/lodos/logger/ozzo-log"
 )
-var mqlog *log.Logger
-var defaultLogger *log.Logger
-func Init(debug bool, ProcessID string, Logdir string) {
-	mqlog = NewLodostLog(debug, ProcessID, Logdir)
-}
 
-func Log()(*log.Logger){
-	if mqlog==nil{
-		if defaultLogger==nil{
-			defaultLogger=NewDefaultLogger()
+var mqlog *log.Logger
+var beego *logs.BeeLogger
+var defaultLogger *log.Logger
+
+func Init(debug bool, ProcessID string, Logdir string) {
+	mqlog = NewMqantLog(debug, ProcessID, Logdir)
+}
+func InitBeego(debug bool, ProcessID string, Logdir string, settings map[string]interface{}) {
+	beego = NewBeegoLogger(debug, ProcessID, Logdir, settings)
+}
+func Log() *log.Logger {
+	if mqlog == nil {
+		if defaultLogger == nil {
+			defaultLogger = NewDefaultLogger()
 		}
 		return defaultLogger
 	}
 	return mqlog
 }
-
+func LogBeego() *logs.BeeLogger {
+	if beego == nil {
+		beego = logs.NewLogger()
+	}
+	return beego
+}
 func Debug(format string, a ...interface{}) {
 	//gLogger.doPrintf(debugLevel, printDebugLevel, format, a...)
-	Log().Debug(format, a...)
+	LogBeego().Debug(format, a...)
 }
 func Info(format string, a ...interface{}) {
 	//gLogger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
-	Log().Info(format, a...)
+	LogBeego().Info(format, a...)
 }
 
 func Error(format string, a ...interface{}) {
 	//gLogger.doPrintf(errorLevel, printErrorLevel, format, a...)
-	Log().Error(format, a...)
+	LogBeego().Error(format, a...)
 }
 
 func Warning(format string, a ...interface{}) {
 	//gLogger.doPrintf(fatalLevel, printFatalLevel, format, a...)
-	Log().Warning(format, a...)
+	LogBeego().Warning(format, a...)
 }
 
 func Close() {
-	Log().Close()
+	LogBeego().Close()
 }

@@ -55,12 +55,16 @@ type Session interface {
 	GetSessionid() string
 	GetServerid() string
 	GetSettings() map[string]string
+	GetCarrier() map[string]string
+	GetToken() string
 	SetIP(ip string)
 	SetNetwork(network string)
 	SetUserid(userid string)
 	SetSessionid(sessionid string)
 	SetServerid(serverid string)
 	SetSettings(settings map[string]string)
+	SetCarrier(carrier map[string]string)
+	SetToken(token string)
 	Serializable()([]byte, error)
 	Update() (error)
 	Bind(Userid string) (error)

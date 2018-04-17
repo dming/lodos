@@ -1,14 +1,13 @@
 package basegate
 
 import (
-	"bufio"
 	"github.com/dming/lodos/conf"
 	"github.com/dming/lodos/network"
 	"time"
 	"github.com/dming/lodos/module"
 	"fmt"
 	"reflect"
-	log "github.com/dming/lodos/log"
+	"github.com/dming/lodos/log"
 	"github.com/dming/lodos/module/base"
 	"github.com/dming/lodos/gate"
 )
@@ -31,6 +30,7 @@ type Gate struct {
 	// tcp
 	TCPAddr string
 
+	createAgent func() gate.Agent
 	//tls
 	Tls      bool
 	CertFile string
@@ -110,7 +110,7 @@ func (this *Gate) NewSessionByMap(data map[string]interface{}) (gate.Session, er
 /**
 自定义rpc参数序列化反序列化  Session
  */
-func (this *Gate)Serialize(param interface{}) (ptype string,p []byte, err error){
+func (this *Gate)Serialize(param interface{}) (ptype string, p []byte, err error){
 	switch v2 := param.(type) {
 	case gate.Session:
 		bytes, err := v2.Serializable()
@@ -142,11 +142,11 @@ func (this *Gate)GetTypes()([]string){
 	return []string{RPC_PARAM_SESSION_TYPE}
 }
 
-func (this *Gate) OnInit(app module.AppInterface, settings *conf.ModuleSettings) {
-	this.BaseModule.OnInit(app, this, settings) //这是必须的
+func (this *Gate) OnInit(app module.AppInterface, module module.FullModule, settings *conf.ModuleSettings) {
+	this.BaseModule.OnInit(app, module, settings) //这是必须的
 	//添加Session结构体的序列化操作类
 	err := app.AddRPCSerialize("this", this)
-	if err!=nil{
+	if err != nil{
 		log.Warning("Adding session structures failed to serialize interfaces",err.Error())
 	}
 
@@ -211,17 +211,14 @@ func (this *Gate) Run(closeSig chan bool) {
 		wsServer.CertFile = this.CertFile
 		wsServer.KeyFile = this.KeyFile
 		wsServer.NewAgent = func(conn *network.WSConn) network.Agent {
-			a := &agent{
-				conn:     conn,
-				gate:     this,
-				r:        bufio.NewReader(conn),
-				w:        bufio.NewWriter(conn),
-				isclose:  false,
-				rev_num:  0,
-				send_num: 0,
+			if this.createAgent == nil {
+				this.createAgent = this.DefaultCreateAgent
 			}
-			return a
+			agent := this.createAgent()
+			agent.OnInit(this, conn)
+			return agent
 		}
+
 	}
 
 	var tcpServer *network.TCPServer
@@ -233,16 +230,12 @@ func (this *Gate) Run(closeSig chan bool) {
 		tcpServer.CertFile = this.CertFile
 		tcpServer.KeyFile = this.KeyFile
 		tcpServer.NewAgent = func(conn *network.TCPConn) network.Agent {
-			a := &agent{
-				conn:     conn,
-				gate:     this,
-				r:        bufio.NewReader(conn),
-				w:        bufio.NewWriter(conn),
-				isclose:  false,
-				rev_num:  0,
-				send_num: 0,
+			if this.createAgent == nil {
+				this.createAgent = this.DefaultCreateAgent
 			}
-			return a
+			agent := this.createAgent()
+			agent.OnInit(this, conn)
+			return agent
 		}
 	}
 
@@ -266,4 +259,17 @@ func (this *Gate) Run(closeSig chan bool) {
 
 func (this *Gate) OnDestroy() {
 	this.BaseModule.OnDestroy() //这是必须的
+}
+
+
+func (this *Gate) DefaultCreateAgent() gate.Agent {
+	a := NewMqttAgent(this.GetSubclass())
+	return a
+}
+/**
+设置创建客户端Agent的函数
+*/
+func (this *Gate) SetCreateAgent(cfunc func() gate.Agent) error {
+	this.createAgent = cfunc
+	return nil
 }

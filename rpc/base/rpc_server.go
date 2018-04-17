@@ -47,7 +47,11 @@ func NewRPCServer(app module.AppInterface, module module.Module) (rpc.RPCServer,
 	server.callback_chan = make(chan rpc.CallInfo, 1)
 	server.mq_chan_done = make(chan error)
 	server.callback_chan_done = make(chan error)
-	//server.ch = make(chan int, app.GetSettings().Rpc.MaxCoroutine) //need to be complete
+	var maxCoroutine int = app.GetSettings().RPC.MaxCoroutine
+	if maxCoroutine < 100 {
+		maxCoroutine = 100
+	}
+	server.ch = make(chan int, maxCoroutine) //need to be complete
 	server.SetGoroutineControl(server)
 
 	//create local rpc service
@@ -175,11 +179,14 @@ func (s *RPCServer) on_callback_handle(callback_chan <-chan rpc.CallInfo, done c
 				if callInfo.RpcInfo.Reply {
 					// need to be reply
 					//需要回复的才回复
-					err := callInfo.Agent.(rpc.MQServer).Callback(callInfo)
-					if err != nil {
-						log.Warning("rpc callback err : %\n%s", err.Error())
+					if callInfo.Agent != nil {
+						err := callInfo.Agent.(rpc.MQServer).Callback(callInfo)
+						if err != nil {
+							log.Warning("rpc callback err : %\n%s", err.Error())
+						}
 					}
 				} else {
+					//
 				}
 			}
 		case <-done :
@@ -196,25 +203,26 @@ EForEnd:
 /**
 接收请求信息
 */
-func (s *RPCServer) on_call_handle(call_chan <-chan rpc.CallInfo, callback_chan chan rpc.CallInfo, done chan error) {
+func (s *RPCServer) on_call_handle(call_chan <-chan rpc.CallInfo, callback_chan chan rpc.CallInfo, done_chan chan error) {
 	for {
 		select {
 		case callInfo, ok := <-call_chan:
 			if !ok {
+				log.Error("chan closed")
 				goto ForEnd
 			} else {
-				if callInfo.RpcInfo.Expired < (time.Now().UnixNano() / 1000000) {
+				if callInfo.RpcInfo.Expired < (time.Now().UnixNano() / 1000 / 1000) {
 					//请求超时了,无需再处理
 					if s.listener != nil {
 						//s.listener.OnTimeOut(callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired)
 					} else {
-						log.Warning("timeout: This is Call", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000000)
+						log.Warning("%s: timeout: This is Call %s with expired %d, now %d", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000/1000)
 					}
 				} else {
 					s.runFunc(callInfo, callback_chan)
 				}
 			}
-		case <-done:
+		case <-done_chan:
 			goto ForEnd
 		}
 	}
@@ -222,7 +230,6 @@ ForEnd:
 }
 
 func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.CallInfo) {
-
 	_errorCallback := func(Cid string, Error string, span opentracing.Span, traceid string) {
 		//异常日志都应该打印
 		log.Error("[%s] %s rpc func(%s) error:\n%s", traceid, s.module.GetType(), callInfo.RpcInfo.Fn, Error)
@@ -250,6 +257,7 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 			log.Error("recover", rn)
 			_errorCallback(callInfo.RpcInfo.Cid, rn, nil, "")
 		}
+		log.Info("@@%s runFunc complete of [%s]", s.module.GetType(), callInfo.RpcInfo.Fn)
 	}()
 
 	functionInfo, ok := s.functions[callInfo.RpcInfo.Fn]
@@ -267,6 +275,7 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 	}
 
 	_runFunc := func() {
+		//return
 		s.wg.Add(1)
 		s.executing++
 		var span opentracing.Span = nil
@@ -288,11 +297,10 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				log.Error(allError)
 				_errorCallback(callInfo.RpcInfo.Cid, allError, span, tradeId)
 			}
-
 			if span != nil {
 				span.Finish()
 			}
-			s.wg.Add(-1)
+			s.wg.Done()
 			s.executing--
 			if s.control != nil {
 				s.control.Finish()
@@ -340,10 +348,8 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				return
 			}*/
 		}
-
 		out := f.Call(in)
 		var rs []interface{}
-
 		if len(out) < 1 {
 			_errorCallback(callInfo.RpcInfo.Cid, "the number of result output is less than 1.", span, tradeId)
 			return
@@ -365,11 +371,11 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				return
 			}
 		}
-		/*
+
 		// 错误信息应该是string或者error格式的
 		var errStr string = ""
 		switch rs[len(out) - 1].(type) {
-		case types.Nil:
+		case nil:
 			errStr = ""
 		case string :
 			errStr = rs[len(out) - 1].(string);
@@ -378,15 +384,17 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 		default:
 			_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("the error.(type) is not as string neither error"), span, tradeId)
 			return
-		}*/
+		}
+		//log.Debug("agent is %s, argsType: %s, args: %s, errStr: %s", reflect.TypeOf(callInfo.Agent).String(), argsType, args, errStr)
 		resultInfo := rpcpb.NewResultInfo(
 			callInfo.RpcInfo.Cid,
-			rs[len(out) - 1].(string),
+			errStr,
 			argsType,
 			args,
 		)
 		callInfo.Result = *resultInfo
 		callback_chan <- callInfo
+		return
 		/*if span != nil {
 			span.LogEventWithPayload("Result.Type", argsType)
 			span.LogEventWithPayload("Result", string(args))

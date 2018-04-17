@@ -185,7 +185,7 @@ func (c *Client) waitPack(pAndErr *packAndErr) (err error) {
 		//消息发送端最终确认这条消息
 		sub := pAndErr.pack.GetVariable().(*Subscribe)
 		for _, top := range sub.GetTopics() {
-			//log.Debug("Subscribe %s",*top.GetName())
+			log.Debug("Subscribe %s",*top.GetName())
 			if top.Qos == 2 {
 				//log.Debug("Ack To Client By Suback \n")
 				//用于 Qos =2 的消息 回复 PUBCOMP
