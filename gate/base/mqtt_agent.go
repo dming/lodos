@@ -17,6 +17,7 @@ import (
 	"container/list"
 	"math/rand"
 	"github.com/dming/lodos/rpc/argsutil"
+	"github.com/dming/lodos/rpc/base"
 )
 
 /**
@@ -269,10 +270,20 @@ func (a *agent) OnRecover(pack *mqtt.Pack) {
 			}
 			args[0] = b
 			results, err := moduleSession.CallArgs(topics[1], argsType, args) //在此调用RPC。--dming
-			log.Info("call %s, result is %v, err is %v", topics[1], results, err)
+			//log.Info("call %s, result is %v, err is %v", topics[1], results, err)
 			var errStr string
 			if err != nil {
-				errStr = err.Error()
+				log.Error(err.Error())
+				switch e := err.(type) {
+				case *baserpc.Error:
+					if e.Code >= 0 { // means error occur in server
+						errStr = "error occur in server"
+					} else {
+						errStr = e.Reason
+					}
+				default:
+					errStr = err.Error()
+				}
 			} else {
 				errStr = ""
 			}

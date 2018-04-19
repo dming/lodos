@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"flag"
-	log "github.com/dming/lodos/log"
+	 "github.com/dming/lodos/log"
 	"os/signal"
 	"strings"
 	"math"
@@ -97,7 +97,7 @@ func (a *app) OnInit(settings conf.Config) error {
 					//如果远程的rpc存在则创建一个对应的客户端
 					client.NewRabbitmqRpcClient(mInfo.Rabbitmq)
 				}
-				if mInfo.Redis != nil {
+				if mInfo.Redis != nil && mInfo.Redis.RPCUri != "" {
 					//如果远程的rpc存在则创建一个对应的客户端
 					client.NewRedisRpcClient(mInfo.Redis)
 				}

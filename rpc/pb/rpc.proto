@@ -1,21 +1,21 @@
 syntax = "proto3";
 package rpcpb;
 
-message MqCallInfo {
-    string Id = 1;
-    string ReplyTo = 2;
-    repeated string ArgsType = 3;
-    repeated bytes Args = 4;
-    string Flag = 5;
-}
+//message MqCallInfo {
+//    string Id = 1;
+//    string ReplyTo = 2;
+//    repeated string ArgsType = 3;
+//    repeated bytes Args = 4;
+//    string Flag = 5;
+//}
 
-message RetInfo {
-    string Flag = 1;
-    string err = 2;
-    repeated string RetsType = 3;
-    repeated bytes Rets = 4;
-    string ReplyTo = 5;
-}
+//message RetInfo {
+//    string Flag = 1;
+//    string err = 2;
+//    repeated string RetsType = 3;
+//    repeated bytes Rets = 4;
+//    string ReplyTo = 5;
+//}
 
 message RPCInfo {
     string Cid = 1;
@@ -31,6 +31,7 @@ message RPCInfo {
 message ResultInfo {
     string Cid = 1;
     string Error = 2;
+    int32 ErrCode = 3;
     repeated string ResultsType = 4;
     repeated bytes Results = 5;
 }

@@ -122,7 +122,8 @@ func (c *rpcClient) CallArgs(_func string, ArgsType []string, args [][]byte) ([]
 		return nil, fmt.Errorf("rpc client closed")
 	}
 	if resultInfo.Error != "" {
-		return nil, fmt.Errorf(resultInfo.Error)
+		log.Error("[%d] err : %s", resultInfo.ErrCode, resultInfo.Error)
+		return nil, NewError(int(resultInfo.ErrCode), resultInfo.Error)
 	}
 
 	if len(resultInfo.Results) != len(resultInfo.ResultsType) {
@@ -286,7 +287,7 @@ func (c *rpcClient) ResolveCallbackChan(callback_chan chan rpcpb.ResultInfo, _fu
 		return nil, fmt.Errorf("client closed")
 	}
 	if resultInfo.Error != "" {
-		return nil, fmt.Errorf(resultInfo.Error)
+		return nil, NewError(int(resultInfo.ErrCode), resultInfo.Error)
 	}
 	if len(resultInfo.Results) != len(resultInfo.ResultsType) {
 		resultInfo.Error += " ###len(resultInfo.Results) != len(resultInfo.ResultsType)### "

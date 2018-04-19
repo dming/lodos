@@ -219,7 +219,7 @@ func (s *RPCServer) on_call_handle(call_chan <-chan rpc.CallInfo, callback_chan 
 						log.Warning("%s: timeout: This is Call %s with expired %d, now %d", s.module.GetType(), callInfo.RpcInfo.Fn, callInfo.RpcInfo.Expired, time.Now().UnixNano()/1000/1000)
 					}
 				} else {
-					s.runFunc(callInfo, callback_chan)
+					go s.runFunc(callInfo, callback_chan)
 				}
 			}
 		case <-done_chan:
@@ -230,10 +230,10 @@ ForEnd:
 }
 
 func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.CallInfo) {
-	_errorCallback := func(Cid string, Error string, span opentracing.Span, traceid string) {
+	_errorCallback := func(Cid string, ErrCode int, Error string, span opentracing.Span, traceid string) {
 		//异常日志都应该打印
 		log.Error("[%s] %s rpc func(%s) error:\n%s", traceid, s.module.GetType(), callInfo.RpcInfo.Fn, Error)
-		resultInfo := rpcpb.NewResultInfo(Cid, Error, nil, nil)
+		resultInfo := rpcpb.NewResultInfo(Cid, int32(ErrCode), Error, nil, nil)
 		callInfo.Result = *resultInfo
 		callback_chan <- callInfo
 		if span != nil {
@@ -255,14 +255,14 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				rn = r.(error).Error()
 			}
 			log.Error("recover", rn)
-			_errorCallback(callInfo.RpcInfo.Cid, rn, nil, "")
+			_errorCallback(callInfo.RpcInfo.Cid, 0, rn, nil, "")
 		}
 		log.Info("@@%s runFunc complete of [%s]", s.module.GetType(), callInfo.RpcInfo.Fn)
 	}()
 
 	functionInfo, ok := s.functions[callInfo.RpcInfo.Fn]
 	if !ok {
-		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn), nil, "")
+		_errorCallback(callInfo.RpcInfo.Cid, 0, fmt.Sprintf("Remote function(%s) not found", callInfo.RpcInfo.Fn), nil, "")
 		return
 	}
 	_func := functionInfo.Function
@@ -270,7 +270,7 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 	argsType := callInfo.RpcInfo.ArgsType
 	f := reflect.ValueOf(_func)
 	if len(args) != f.Type().NumIn() {
-		_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("The number of args %s is not adapted.%s", args, f.String()), nil, "")
+		_errorCallback(callInfo.RpcInfo.Cid, ClientParamNotAdapted, fmt.Sprintf("The number of args %s is not adapted.%s", args, f.String()), nil, "")
 		return
 	}
 
@@ -295,7 +295,7 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				errstr := string(buf[:l])
 				allError := fmt.Sprintf("%s rpc func(%s) error %s\n ----Stack----\n%s", s.module.GetType(), callInfo.RpcInfo.Fn, rn, errstr)
 				log.Error(allError)
-				_errorCallback(callInfo.RpcInfo.Cid, allError, span, tradeId)
+				_errorCallback(callInfo.RpcInfo.Cid, 0, allError, span, tradeId)
 			}
 			if span != nil {
 				span.Finish()
@@ -317,7 +317,7 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 			for k, v := range argsType {
 				v, err := argsutil.Bytes2Args(s.app, v, args[k])
 				if err != nil {
-					_errorCallback(callInfo.RpcInfo.Cid, err.Error(), span, tradeId)
+					_errorCallback(callInfo.RpcInfo.Cid, ServerFormatError, err.Error(), span, tradeId)
 					return
 				}
 				//switch v2 := v.(type) {
@@ -348,10 +348,41 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 				return
 			}*/
 		}
-		out := f.Call(in)
+
+		//todo: make the method can be cancel while time expired
+		//finish: code as this is suppose to [can cancel the runFunc method when time expired]
+		out_chan := make(chan []reflect.Value)
+		_rpcCallFunc := func() {
+			out_chan <- f.Call(in)
+		}
+		var out []reflect.Value = make([]reflect.Value, 0)
+		var expired int64 = callInfo.RpcInfo.Expired*1000*1000 - time.Now().UTC().UnixNano()
+		if expired < 0 {
+			_errorCallback(callInfo.RpcInfo.Cid,
+				ServerExpired,
+				fmt.Sprintf("!!! func[%s] expired in rpc_server", callInfo.RpcInfo.Fn),
+				span, tradeId)
+			return
+			//expired = int64(time.Second) * 1
+		}
+		go _rpcCallFunc()
+		select {
+		case _out := <-out_chan:
+			out = _out
+		case <-time.After(time.Duration(expired)):
+		//case <-time.After(time.Second * time.Duration(s.app.GetSettings().RPC.RpcExpired)):
+		//todo: s.app.GetSettings().RPC.RpcExpired should not be nil
+			//log.Warning("%d", expired)
+			_errorCallback(callInfo.RpcInfo.Cid,
+				ServerExpired,
+				fmt.Sprintf("!!! func[%s] expired in rpc_server", callInfo.RpcInfo.Fn),
+					span, tradeId)
+			return
+		}
+
 		var rs []interface{}
 		if len(out) < 1 {
-			_errorCallback(callInfo.RpcInfo.Cid, "the number of result output is less than 1.", span, tradeId)
+			_errorCallback(callInfo.RpcInfo.Cid, 0, "the number of result output is less than 1.", span, tradeId)
 			return
 		}
 		if len(out) > 0 {
@@ -367,27 +398,34 @@ func (s *RPCServer) runFunc(callInfo rpc.CallInfo, callback_chan chan<- rpc.Call
 			var err error = nil
 			argsType[i], args[i], err = argsutil.ArgsTypeAnd2Bytes(s.app, rs[i])
 			if err != nil {
-				_errorCallback(callInfo.RpcInfo.Cid, err.Error(), span, tradeId)
+				_errorCallback(callInfo.RpcInfo.Cid, ServerFormatError, err.Error(), span, tradeId)
 				return
 			}
 		}
 
 		// 错误信息应该是string或者error格式的
 		var errStr string = ""
-		switch rs[len(out) - 1].(type) {
+		var errCode int32 = 0
+		switch er := rs[len(out) - 1].(type) {
 		case nil:
 			errStr = ""
 		case string :
-			errStr = rs[len(out) - 1].(string);
+			errStr = er
 		case error :
-			errStr = rs[len(out) - 1].(error).Error()
+			errStr = er.Error()
+			switch e := er.(type) {
+			case *Error:
+				errCode = int32(e.Code)
+				errStr = e.Error()
+			}
 		default:
-			_errorCallback(callInfo.RpcInfo.Cid, fmt.Sprintf("the error.(type) is not as string neither error"), span, tradeId)
+			_errorCallback(callInfo.RpcInfo.Cid, ServerFormatError, fmt.Sprintf("the error.(type) is not as string neither error"), span, tradeId)
 			return
 		}
 		//log.Debug("agent is %s, argsType: %s, args: %s, errStr: %s", reflect.TypeOf(callInfo.Agent).String(), argsType, args, errStr)
 		resultInfo := rpcpb.NewResultInfo(
 			callInfo.RpcInfo.Cid,
+			errCode,
 			errStr,
 			argsType,
 			args,

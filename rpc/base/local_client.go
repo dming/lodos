@@ -147,11 +147,11 @@ func (c *localClient) on_timeout_handle(args interface{}) {
 				//从Map中删除
 				c.callInfos.Delete(key)
 				//已经超时了
-				resultInfo := &rpcpb.ResultInfo{
-					Results:     nil,
-					Error:      fmt.Sprintf("timeout: This CallInfo : %s timeout!", clientCallInfo.correlation_id),
-					ResultsType: nil,
-				}
+				resultInfo := rpcpb.NewResultInfo(
+					"",
+					ServerExpired,
+					fmt.Sprintf("timeout: This CallInfo : %s timeout!", clientCallInfo.correlation_id),
+					nil, nil)
 				//发送一个超时的消息
 				clientCallInfo.call_chan <- *resultInfo
 				//关闭管道

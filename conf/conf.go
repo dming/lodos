@@ -45,8 +45,10 @@ type Mongo struct {
 }
 
 type Redis struct {
-	Uri string  //redis://:[password]@[ip]:[port]/[db]
-	Queue string
+	RPCUri   string //redis://:[password]@[ip]:[port]/[db]
+	RPCQueue string
+	DBUri    string
+	DBQueue  string
 }
 /*
 type Redis struct {

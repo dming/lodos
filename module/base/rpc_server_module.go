@@ -34,7 +34,7 @@ func (rs *rpcServerModule) OnInit (app module.AppInterface, module module.Module
 		server.NewRabbitmqRpcServer(settings.Rabbitmq)
 		logInfo += "rabbitmq, "
 	}
-	if settings.Redis != nil {
+	if settings.Redis != nil && settings.Redis.RPCUri != ""  {
 		//存在远程redis rpc的配置
 		server.NewRedisRpcServer(settings.Redis)
 		logInfo += "redis"

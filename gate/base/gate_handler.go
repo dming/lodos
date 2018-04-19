@@ -1,7 +1,7 @@
 package basegate
 
 import (
-	log "github.com/dming/lodos/log"
+	"github.com/dming/lodos/log"
 	"fmt"
 	"reflect"
 	"github.com/dming/lodos/gate"
@@ -76,7 +76,6 @@ func (h *gateHandler) Bind(Sessionid string, Userid string) (result gate.Session
 			log.Error("Error in Bind [%s]", r)
 		}
 	}()
-
 	//log.Debug("bind call")
 	agent := h.sessions.Get(Sessionid)
 	if agent == nil {

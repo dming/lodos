@@ -10,6 +10,7 @@ import (
 	"github.com/dming/lodos/utils"
 	"time"
 	"github.com/dming/lodos/rpc"
+	"github.com/dming/lodos/db/base"
 )
 
 type redisClient struct {
@@ -37,12 +38,12 @@ func NewRedisClient(info *conf.Redis) (client *redisClient , err error) {
 	client.callInfos = utils.New()
 	client.redisInfo = info
 	client.callbackQueueName = createQueueName()
-	client.callQueueName = info.Queue
+	client.callQueueName = info.RPCQueue
 	client.done = make(chan error)
 	client.timeout_done = make(chan error)
 	client.isClose = false
 	client.ch = make(chan int, 100)
-	pool := utils.GetRedisFactory().GetPool(info.Uri).Get()
+	pool := basedb.GetRedisFactory().GetPool(info.RPCUri).Get()
 	defer pool.Close()
 	//_, errs:=pool.Do("EXPIRE", client.callbackQueueName, 60)
 	//if errs != nil {
@@ -65,7 +66,7 @@ func (c *redisClient ) Finish() {
 }
 
 func (c *redisClient ) Done() (err error) {
-	pool := utils.GetRedisFactory().GetPool(c.redisInfo.Uri).Get()
+	pool := basedb.GetRedisFactory().GetPool(c.redisInfo.RPCUri).Get()
 	defer pool.Close()
 	//删除临时通道
 	pool.Do("DEL", c.callbackQueueName)
@@ -90,7 +91,7 @@ func (c *redisClient ) Done() (err error) {
 消息请求
 */
 func (c *redisClient ) Call(callInfo rpc.CallInfo, callback_chan chan rpcpb.ResultInfo) error {
-	pool := utils.GetRedisFactory().GetPool(c.redisInfo.Uri).Get()
+	pool := basedb.GetRedisFactory().GetPool(c.redisInfo.RPCUri).Get()
 	defer pool.Close()
 	var err error
 	if c.isClose {
@@ -124,7 +125,7 @@ func (c *redisClient ) Call(callInfo rpc.CallInfo, callback_chan chan rpcpb.Resu
 */
 func (c *redisClient ) CallNR(callInfo rpc.CallInfo) error {
 	c.Wait() //阻塞等待可以发下一条消息
-	pool := utils.GetRedisFactory().GetPool(c.redisInfo.Uri).Get()
+	pool := basedb.GetRedisFactory().GetPool(c.redisInfo.RPCUri).Get()
 	defer pool.Close()
 	var err error
 
@@ -179,7 +180,7 @@ LLForEnd:
 */
 func (c *redisClient ) on_response_handle(done chan error) {
 	for !c.isClose {
-		pool := utils.GetRedisFactory().GetPool(c.redisInfo.Uri).Get()
+		pool := basedb.GetRedisFactory().GetPool(c.redisInfo.RPCUri).Get()
 		result, err := pool.Do("brpop", c.callbackQueueName, 0)//waiting for message accepted
 		pool.Close()
 		if err == nil && result != nil {

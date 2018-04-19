@@ -7,8 +7,8 @@ import (
 	"github.com/dming/lodos/log"
 	"github.com/dming/lodos/rpc"
 	"github.com/dming/lodos/rpc/pb"
-	"github.com/dming/lodos/utils"
 	"runtime"
+	"github.com/dming/lodos/db/base"
 )
 
 type redisServer struct {
@@ -22,8 +22,8 @@ type redisServer struct {
 }
 
 func NewRedisServer(info *conf.Redis, call_chan chan rpc.CallInfo) (*redisServer, error) {
-	var queueName = info.Queue
-	var url = info.Uri
+	var queueName = info.RPCQueue
+	var url = info.RPCUri
 	server := new(redisServer)
 	server.call_chan = call_chan
 	server.url = url
@@ -37,7 +37,7 @@ func NewRedisServer(info *conf.Redis, call_chan chan rpc.CallInfo) (*redisServer
 	//log.Printf("shutting down")
 	//
 	//if err := c.Shutdown(); err != nil {
-	//	log.Fatalf("error during shutdown: %s", err)
+	//	log.Fatalf("error dUriRPCng shutdown: %s", err)
 	//}
 }
 
@@ -72,7 +72,7 @@ func (s *redisServer) Callback(callinfo rpc.CallInfo) error {
 消息应答
 */
 func (s *redisServer) response(props map[string]interface{}, body []byte) error {
-	pool := utils.GetRedisFactory().GetPool(s.info.Uri).Get()
+	pool := basedb.GetRedisFactory().GetPool(s.info.RPCUri).Get()
 	defer pool.Close()
 	var err error
 	_, err = pool.Do("lpush", props["reply_to"].(string), body)
@@ -104,7 +104,7 @@ func (s *redisServer) on_request_handle(done chan error) {
 		}
 	}()
 	for !s.closed {
-		s.pool = utils.GetRedisFactory().GetPool(s.info.Uri).Get()
+		s.pool = basedb.GetRedisFactory().GetPool(s.info.RPCUri).Get()
 		result, err := s.pool.Do("brpop", s.queueName, 0)
 		s.pool.Close()
 		if err == nil && result != nil {
