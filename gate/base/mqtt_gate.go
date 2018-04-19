@@ -258,7 +258,7 @@ func (this *Gate) Run(closeSig chan bool) {
 }
 
 func (this *Gate) OnDestroy() {
-	this.BaseModule.OnDestroy() //这是必须的
+	this.BaseModule.Destroy() //这是必须的
 }
 
 

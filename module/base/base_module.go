@@ -56,7 +56,7 @@ func (m *BaseModule) OnInit(app module.AppInterface, subclass module.FullModule,
 	m.GetServer().GetRpcServer().SetListener(m)
 }
 
-func (m *BaseModule) OnDestroy() {
+func (m *BaseModule) Destroy() {
 	//注销模块
 	//一定别忘了关闭RPC
 	m.GetServer().OnDestroy()
