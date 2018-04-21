@@ -2,25 +2,83 @@
 
 package seq
 
-import "github.com/dming/lodos/utils/uuid"
+import "github.com/dming/lodos/addon/seq/seqconf"
 
 //[16]byte as uuid, plus int64 format [16]byte as sequence, as [32]byte
 type Sequence int64 //can be formatted as [16]byte
 type UserSequence [32]byte //[32]byte, as format [uuid][int64]
 
+//uid is int, it should be check from db->map[uuid]int
 type Section interface {
 	GetFlag() int
-	AddUser(id uuid.UUID, seq Sequence) error
-	Exist(uid uuid.UUID) bool
-	GetSeq(id uuid.UUID) (seq Sequence, err error)
+	AddUser(uid int, seq Sequence) error
+	Exist(uid int) bool
+	GetSeq(uid int) (seq Sequence, err error)
 	//UpdateMaxSeq()
 	GetMaxSeq() Sequence
 }
 
-type AllocSvr interface {
-	GetRouter() //get router from Mediate server >> settings.MediateIP
+type SectionManager interface {
+	//begin id
+	//size
+	//section list
+}
 
-	GetSeq(id uuid.UUID) (seq Sequence, err error)
+//Run in Alloc
+/**
+AllocSvr
+LeaseCherk
+SectionManager
+Section
+ */
+//include a store_svr for load route from db, and save to db
+//a section means a sequence service unit,so it need a section_manager
+//a section_manager contains continuous id sections
+type AllocSvr interface {
+	LeaseClerk
+
+	OnInit(settings map[string]string) //assign settings and init from newest route table
+	//Get request from client and return seq [or route table in addition]
+	//client request should include user ID and route version
+	Run()
+	OnDestroy()
+
+	GetSeq(id int) (seq Sequence, err error)
+}
+
+/*
+   所谓租约(leases)，其实就是一个合同，即服务端给予客户端在一定期限内可以控制修改操作的权力。
+   如果服务端要修改数据，首先要征求拥有这块数据的租约的客户端的同意，之后才可以修改。
+   客户端从服务端读取数据时往往就同时获取租约，在租约期限内，如果没有收到服务端的修改请求，
+   就可以保证当前缓存中的内容就是最新的。如果在租约期限内收到了修改数据的请求并且同意了，
+   就需要清空缓存。在租约过期以后，客户端如果还要从缓存读取数据，就必须重新获取租约，
+   我们称这个操作为“续约”{!引用自<<租约机制简介>>}。
+ */
+
+// ## 租约
+// 为了避免失联AllocSvr提供错误的服务，返回脏数据，AllocSvr需要跟StoreSvr保持租约。
+// 这个租约机制由以下两个条件组成：
+// > - 租约失效：AllocSvr N秒内无法从StoreSvr读取加载配置时，AllocSvr停止服务
+//   - 租约生效：AllocSvr读取到新的加载配置后，立即卸载需要卸载的号段，
+//     需要加载的新号段等待N秒后提供服务
+//
+// 这两个条件保证了切换时，新AllocSvr肯定在旧AllocSvr下线后才开始提供服务。
+// 但这种租约机制也会造成切换的号段存在小段时间的不可服务，
+// 不过由于微信后台逻辑层存在重试机制及异步重试队列，
+// 小段时间的不可服务是用户无感知的，而且出现租约失效、切换是小概率事件，整体上是可以接受的。
+//
+type LeaseClerk interface {
+	// 租约生效
+	OnLeaseValid() //callback
+	// 路由表更新
+	OnLeaseUpdated() //callback
+	// 租约失效
+	OnLeaseInvalid() //callback
+
+	// 开始租约服务
+	Start()
+	// 停止租约服务
+	Stop()
 }
 
 // ## 容灾2.0架构：嵌入式路由表容灾
@@ -107,7 +165,7 @@ struct RouterTable {
   // std::list<RouterNode> node_list; // 整个集群所有allocsvr节点
 };
  */
-type Router interface {
+type RouterTable interface {
 	GetVersion()
 	SetVersion()
 	Update() // when update, set version
@@ -124,6 +182,13 @@ type Router interface {
 type MediatetSvr interface {
 	OnInit()
 	Run()
+	OnDestroy()
+	//GetRouterTable()
+
+	RegisterAllocSvr()
+	UnRegisterAllocSvr()
+	// 初始化路由表
+	UpdateRouterTable()
 }
 
 // 把存储层StoreSvr
@@ -142,5 +207,15 @@ type MediatetSvr interface {
 // set_idx:属于第几个set
 // filepath: 存储路径
 type StoreSvr interface {
+	OnInit(settings *seqconf.Store) //db is local file.
+	Run()
+	OnDestroy()
 
+
+	LoadRouterTable() (RouterTable, error)
+	SaveRouterTable(table RouterTable) error
+	GetMaxSeq(id int, size int) (int, Sequence, error)
+	LoadMaxSeq() error
+	SaveMaxSeq(id int, size int, maxSeq Sequence) error
 }
+

@@ -14,14 +14,16 @@ func GetSectionManager() *section_manager {
 }
 
 type section_manager struct {
-	sections map[int]*section
+	startId int
+	size int
+	sections []*section //len(sections) == size
 }
 
 func (sm *section_manager) AddSection (sec *section) error {
-	if _, ok := sm.sections[sec.flag]; ok {
-		return fmt.Errorf("section[%d] already exist", sec.flag)
+	if _, ok := sm.sections[sec.begin_id]; ok {
+		return fmt.Errorf("section[%d] already exist", sec.begin_id)
 	}
-	sm.sections[sec.flag] = sec
+	sm.sections[sec.begin_id] = sec
 	return nil
 }
 

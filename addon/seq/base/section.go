@@ -2,7 +2,6 @@ package base
 
 import (
 	"fmt"
-	"github.com/dming/lodos/utils/uuid"
 	"github.com/dming/lodos/addon/seq"
 )
 
@@ -11,25 +10,26 @@ func NewSection(_flag int, _maxSeq seq.Sequence, _step seq.Sequence) (*section, 
 		return nil, fmt.Errorf("step or max_seq cannot equal or negative than 0")
 	}
 	return &section{
-		flag: _flag,
-		users: make(map[uuid.UUID]*user),
-		maxSeq: _maxSeq,
-		step: _step,
+		begin_id: _flag,
+		users:    make(map[int]*user),
+		maxSeq:   _maxSeq,
+		step:     _step,
 	}, nil
 }
 
+//user id is between begin_id and begin_id + 1000
 type section struct {
-	flag int
-	users map[uuid.UUID]*user
-	maxSeq seq.Sequence
-	step seq.Sequence
+	begin_id int
+	users    map[int]*user
+	maxSeq   seq.Sequence
+	step     seq.Sequence
 }
 
-func (s *section) GetFlag() int {
-	return s.flag
+func (s *section) StartId() int {
+	return s.begin_id
 }
 
-func (s *section) AddUser(id uuid.UUID, _seq seq.Sequence) error {
+func (s *section) AddUser(id int, _seq seq.Sequence) error {
 	if _, ok := s.users[id]; ok {
 		return fmt.Errorf("user[%s] already exist")
 	}
@@ -40,14 +40,14 @@ func (s *section) AddUser(id uuid.UUID, _seq seq.Sequence) error {
 	return nil
 }
 
-func (s *section) Exist(uid uuid.UUID) bool {
+func (s *section) Exist(uid int) bool {
 	if _, ok := s.users[uid]; ok {
 		return true
 	}
 	return false
 }
 
-func (s *section) GetSeq(id uuid.UUID) (_seq seq.Sequence, err error) {
+func (s *section) GetSeq(id int) (_seq seq.Sequence, err error) {
 	if u, ok := s.users[id]; ok {
 		u.curSeq++
 		if u.curSeq > s.maxSeq {
@@ -63,7 +63,7 @@ func (s *section) GetMaxSeq() seq.Sequence {
 }
 
 type user struct {
-	uid    uuid.UUID
+	uid    int
 	curSeq seq.Sequence
 }
 

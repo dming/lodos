@@ -20,11 +20,13 @@ type ExchangeVerify interface {
 	MaxSeq() seq.Sequence
 	CurSeq() seq.Sequence
 	Step() seq.Sequence
+	RedisUrl() string
 	SetMaxSeq(se seq.Sequence) error
+	SetRedisUrl(url string)
 
 	CreateEntity(uid uuid.UUID, _type EntityType, _fund int) (Entity, error)
-	CreateGoods(uid uuid.UUID, _type GoodsType, _stackable bool) (Goods, error)
-	ExchangeGoods(params ...ExchangeUnit) error
+	CreateGoods(seq seq.Sequence, _type GoodsType, _stackable bool) (Goods, error)
+	ExchangeGoods(save bool, params ...ExchangeUnit) error
 	VerifyGoods(entity Entity, goods []Goods) error
 	QueryGoods(entity uuid.UUID) (goods []Goods)
 
